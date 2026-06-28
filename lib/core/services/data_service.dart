@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:ascend/core/enums/app_enums.dart';
 import 'package:ascend/core/services/database_service.dart';
 import 'package:ascend/data/models/habit.dart';
 import 'package:share_plus/share_plus.dart';
@@ -68,17 +69,17 @@ class DataService {
         csvData.add([
           habit.name,
           habit.type.toString().split('.').last,
-          habit.category ?? '',
+          habit.category.displayName,
           habit.frequency.toString().split('.').last,
           habit.targetValue ?? '',
-          habit.unit.toString().split('.').last,
+          habit.targetUnit ?? '',
           DateFormat(_dateFormat).format(entry.date),
           entry.dayNumber,
           entry.count,
           entry.value ?? '',
           entry.notes ?? '',
           entry.isSkipped,
-          habit.successRate.toStringAsFixed(2),
+          (habit.entries.isEmpty ? 0 : (habit.entries.where((e) => e.count > 0).length / habit.entries.length) * 100).toStringAsFixed(2),
           habit.currentStreak,
           habit.bestStreak,
         ]);
@@ -89,17 +90,17 @@ class DataService {
         csvData.add([
           habit.name,
           habit.type.toString().split('.').last,
-          habit.category ?? '',
+          habit.category.displayName,
           habit.frequency.toString().split('.').last,
           habit.targetValue ?? '',
-          habit.unit.toString().split('.').last,
+          habit.targetUnit ?? '',
           '', // No entry date
           '', // No day number
           '', // No count
           '', // No value
           '', // No notes
           '', // No skip status
-          habit.successRate.toStringAsFixed(2),
+          (habit.entries.isEmpty ? 0 : (habit.entries.where((e) => e.count > 0).length / habit.entries.length) * 100).toStringAsFixed(2),
           habit.currentStreak,
           habit.bestStreak,
         ]);
@@ -118,7 +119,7 @@ class DataService {
       'metadata': {
         'habitName': habit.name,
         'totalEntries': habit.entries.length,
-        'successRate': habit.successRate,
+        'successRate': habit.entries.isEmpty ? 0 : (habit.entries.where((e) => e.count > 0).length / habit.entries.length) * 100,
         'currentStreak': habit.currentStreak,
         'exportedBy': 'Ascend Habit Tracker',
       }
@@ -392,7 +393,7 @@ class DataService {
     final totalHabits = habits.length;
     final activeHabits = habits.where((h) => !h.isArchived).length;
     final totalEntries = habits.fold(0, (sum, h) => sum + h.entries.length);
-    final avgSuccessRate = habits.isEmpty ? 0.0 : habits.fold(0.0, (sum, h) => sum + h.successRate) / habits.length;
+    final avgSuccessRate = habits.isEmpty ? 0.0 : habits.fold(0.0, (sum, h) => sum + (h.entries.isEmpty ? 0.0 : (h.entries.where((e) => e.count > 0).length / h.entries.length) * 100)) / habits.length;
     
     report.writeln('OVERVIEW');
     report.writeln('-' * 20);
@@ -404,12 +405,16 @@ class DataService {
     
     // Top performers
     if (habits.isNotEmpty) {
-      final sortedBySuccess = [...habits]..sort((a, b) => b.successRate.compareTo(a.successRate));
+      final sortedBySuccess = [...habits]..sort((a, b) {
+        final rateA = a.entries.isEmpty ? 0.0 : (a.entries.where((e) => e.count > 0).length / a.entries.length) * 100;
+        final rateB = b.entries.isEmpty ? 0.0 : (b.entries.where((e) => e.count > 0).length / b.entries.length) * 100;
+        return rateB.compareTo(rateA);
+      });
       report.writeln('TOP PERFORMERS');
       report.writeln('-' * 20);
       for (int i = 0; i < sortedBySuccess.length && i < 5; i++) {
         final habit = sortedBySuccess[i];
-        report.writeln('${i + 1}. ${habit.formattedName} - ${habit.successRate.toStringAsFixed(1)}%');
+        report.writeln('${i + 1}. ${habit.formattedName} - ${(habit.entries.isEmpty ? 0.0 : (habit.entries.where((e) => e.count > 0).length / habit.entries.length) * 100).toStringAsFixed(1)}%');
       }
       report.writeln();
       
@@ -433,16 +438,13 @@ class DataService {
       report.writeln();
       report.writeln(habit.formattedName);
       report.writeln('  Type: ${habit.type.toString().split('.').last}');
-      if (habit.category != null) report.writeln('  Category: ${habit.category}');
+      report.writeln('  Category: ${habit.category.displayName}');
       report.writeln('  Frequency: ${habit.frequency.toString().split('.').last}');
-      if (habit.targetValue != null) report.writeln('  Target: ${habit.targetValue} ${habit.getUnitDisplayName()}');
-      report.writeln('  Success Rate: ${habit.successRate.toStringAsFixed(1)}%');
+      if (habit.targetValue != null) report.writeln('  Target: ${habit.targetValue} ${habit.targetUnit ?? ''}');
+      report.writeln('  Success Rate: ${(habit.entries.isEmpty ? 0.0 : (habit.entries.where((e) => e.count > 0).length / habit.entries.length) * 100).toStringAsFixed(1)}%');
       report.writeln('  Current Streak: ${habit.currentStreak} days');
       report.writeln('  Best Streak: ${habit.bestStreak} days');
       report.writeln('  Total Entries: ${habit.entries.length}');
-      if (habit.notes != null && habit.notes!.isNotEmpty) {
-        report.writeln('  Notes: ${habit.notes}');
-      }
       
       // Recent entries (last 5)
       final recentEntries = [...habit.entries]..sort((a, b) => b.date.compareTo(a.date));
@@ -450,12 +452,12 @@ class DataService {
         report.writeln('  Recent Entries:');
         for (int i = 0; i < recentEntries.length && i < 5; i++) {
           final entry = recentEntries[i];
-          final status = entry.isSkipped ? 'Skipped' : habit.isPositiveDay(entry) ? 'Success' : 'Failed';
+          final status = entry.isSkipped ? 'Skipped' : entry.count > 0 ? 'Success' : 'Failed';
           final dateStr = DateFormat('MMM d').format(entry.date);
           String entryDetails = '    $dateStr - $status';
           
           if (entry.value != null) {
-            entryDetails += ' (${entry.value} ${entry.unit ?? habit.getUnitDisplayName()})';
+            entryDetails += ' (${entry.value} ${entry.unit ?? habit.targetUnit ?? ''})';
           } else if (entry.count > 0) {
             entryDetails += ' (${entry.count})';
           }

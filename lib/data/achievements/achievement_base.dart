@@ -93,7 +93,7 @@ class AchievementHelpers {
       ..sort((a, b) => b.date.compareTo(a.date));
     
     for (final entry in sortedEntries) {
-      if (entry.isSkipped == true || (!habit.isPositiveDay(entry))) {
+      if (entry.isSkipped == true || entry.count <= 0) {
         consecutiveSkips++;
       } else {
         break;
@@ -118,7 +118,7 @@ class AchievementHelpers {
       ..sort((a, b) => a.date.compareTo(b.date));
     
     for (final entry in sortedEntries) {
-      if (habit.isPositiveDay(entry)) {
+      if (entry.count > 0) {
         currentStreak++;
       } else {
         if (currentStreak > 0) {
@@ -139,7 +139,7 @@ class AchievementHelpers {
   }
 
   static double getSuccessRate(Habit habit) {
-    return habit.successRate;
+    return habit.entries.isEmpty ? 0.0 : (habit.entries.where((e) => e.count > 0).length / habit.entries.length) * 100;
   }
 
   static int getCurrentStreak(Habit habit) {
@@ -147,6 +147,6 @@ class AchievementHelpers {
   }
 
   static int getTotalPoints(Habit habit) {
-    return habit.totalPoints;
+    return habit.totalCompletions;
   }
 } 

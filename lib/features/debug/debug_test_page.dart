@@ -118,32 +118,14 @@ class _DebugTestPageState extends State<DebugTestPage> {
                   
                   SizedBox(height: 24),
                   
-                  _buildSectionHeader('⭐ Points & Level Tests'),
+                  _buildSectionHeader('⭐ Habit Tests'),
                   SizedBox(height: 16),
                   _buildTestCard(
-                    title: 'Add 10,000 Points',
-                    description: 'Adds points to all habits for testing',
-                    icon: Icons.star,
-                    color: Colors.amber,
-                    onTap: () => _addPointsToAllHabits(10000),
-                  ),
-                  
-                  SizedBox(height: 12),
-                  _buildTestCard(
-                    title: 'Max Out All Levels',
-                    description: 'Sets all habits to maximum level',
-                    icon: Icons.trending_up,
-                    color: Colors.green,
-                    onTap: _maxOutAllLevels,
-                  ),
-                  
-                  SizedBox(height: 12),
-                  _buildTestCard(
-                    title: 'Reset All Progress',
-                    description: 'Resets all points and levels to 0',
+                    title: 'Reset All Habits',
+                    description: 'Clears all entries from all habits',
                     icon: Icons.restart_alt,
                     color: Colors.red,
-                    onTap: _resetAllProgress,
+                    onTap: _resetAllHabits,
                   ),
                   
                   SizedBox(height: 24),
@@ -268,9 +250,8 @@ class _DebugTestPageState extends State<DebugTestPage> {
       );
     }
     
-    final totalPoints = _habits.fold<int>(0, (sum, h) => sum + h.totalPoints);
-    final totalLevel = _habits.fold<int>(0, (sum, h) => sum + h.level);
-    final totalAchievements = _habits.fold<int>(0, (sum, h) => sum + h.unlockedAchievements.length);
+    final totalEntries = _habits.fold<int>(0, (sum, h) => sum + h.entries.length);
+    final totalStreaks = _habits.fold<int>(0, (sum, h) => sum + h.currentStreak);
     
     return Card(
       child: Padding(
@@ -280,11 +261,11 @@ class _DebugTestPageState extends State<DebugTestPage> {
             Row(
               children: [
                 Expanded(
-                  child: _buildStatItem('Total Points', totalPoints.toString(), Icons.star, Colors.amber),
+                  child: _buildStatItem('Habits', _habits.length.toString(), Icons.list, Colors.blue),
                 ),
                 SizedBox(width: 12),
                 Expanded(
-                  child: _buildStatItem('Total Levels', totalLevel.toString(), Icons.trending_up, Colors.green),
+                  child: _buildStatItem('Total Entries', totalEntries.toString(), Icons.timeline, Colors.green),
                 ),
               ],
             ),
@@ -292,11 +273,11 @@ class _DebugTestPageState extends State<DebugTestPage> {
             Row(
               children: [
                 Expanded(
-                  child: _buildStatItem('Achievements', totalAchievements.toString(), Icons.emoji_events, Colors.purple),
+                  child: _buildStatItem('Active Streaks', totalStreaks.toString(), Icons.local_fire_department, Colors.deepOrange),
                 ),
                 SizedBox(width: 12),
                 Expanded(
-                  child: _buildStatItem('Habits', _habits.length.toString(), Icons.list, Colors.blue),
+                  child: _buildStatItem('Categories', _habits.map((h) => h.category).toSet().length.toString(), Icons.category, Colors.purple),
                 ),
               ],
             ),
@@ -349,12 +330,6 @@ class _DebugTestPageState extends State<DebugTestPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('global_achievements', allAchievementIds);
     
-    // Also add to each habit for backward compatibility
-    for (final habit in _habits) {
-      habit.unlockedAchievements = Set<String>.from(allAchievementIds).toList();
-      await StorageService.save(habit);
-    }
-    
     // Unlock all themes
     final allThemes = ThemeService.themePresets.keys.toList();
     await prefs.setStringList('unlocked_themes', allThemes);
@@ -386,12 +361,6 @@ class _DebugTestPageState extends State<DebugTestPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList('global_achievements', []);
     
-    // Clear each habit's achievements
-    for (final habit in _habits) {
-      habit.unlockedAchievements = <String>[];
-      await StorageService.save(habit);
-    }
-    
     setState(() => _isLoading = false);
     
     ScaffoldMessenger.of(context).showSnackBar(
@@ -402,26 +371,11 @@ class _DebugTestPageState extends State<DebugTestPage> {
     );
   }
   
-  Future<void> _addPointsToAllHabits(int points) async {
+  Future<void> _resetAllHabits() async {
     setState(() => _isLoading = true);
     
     for (final habit in _habits) {
-      // Add points without triggering achievements
-      habit.totalPoints += points;
-      
-      // Calculate level
-      int newLevel = 1;
-      int pointsNeeded = 100;
-      int remainingPoints = habit.totalPoints;
-      
-      while (remainingPoints >= pointsNeeded) {
-        remainingPoints -= pointsNeeded;
-        newLevel++;
-        pointsNeeded = (newLevel * 100);
-      }
-      
-      habit.level = newLevel;
-      
+      habit.entries.clear();
       await StorageService.save(habit);
     }
     
@@ -429,42 +383,7 @@ class _DebugTestPageState extends State<DebugTestPage> {
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Added $points points to all habits!'),
-        backgroundColor: Colors.green,
-      ),
-    );
-  }
-  
-  Future<void> _maxOutAllLevels() async {
-    for (final habit in _habits) {
-      habit.level = 100;
-      habit.experiencePoints = 100000;
-      habit.totalPoints = 100000;
-      await StorageService.save(habit);
-    }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('All habits maxed out! 🚀'),
-        backgroundColor: Colors.green,
-      ),
-    );
-    
-    _loadHabits();
-  }
-  
-  Future<void> _resetAllProgress() async {
-    for (final habit in _habits) {
-      habit.level = 1;
-      habit.experiencePoints = 0;
-      habit.totalPoints = 0;
-      habit.unlockedAchievements.clear();
-      await StorageService.save(habit);
-    }
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('All progress reset'),
+        content: Text('All habit entries cleared'),
         backgroundColor: Colors.red,
       ),
     );

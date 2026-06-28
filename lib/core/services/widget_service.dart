@@ -36,7 +36,7 @@ class WidgetService {
           e.date.year == today.year &&
           e.date.month == today.month &&
           e.date.day == today.day &&
-          h.isPositiveDay(e)
+          e.count > 0
         );
         return todayEntries.isNotEmpty;
       }).length;
@@ -108,7 +108,7 @@ class WidgetService {
         e.date.year == today.year &&
         e.date.month == today.month &&
         e.date.day == today.day &&
-        h.isPositiveDay(e)
+        e.count > 0
       );
       return todayEntries.isNotEmpty && !h.isArchived && !h.isPaused;
     }).length;
@@ -165,9 +165,9 @@ class WidgetService {
         switch (h.frequency) {
           case HabitFrequency.Daily:
             return true;
-          case HabitFrequency.Weekdays:
+          case HabitFrequency.MondayOnly:
             return date.weekday <= 5;
-          case HabitFrequency.Weekends:
+          case HabitFrequency.Weekend:
             return date.weekday > 5;
           case HabitFrequency.CustomDays:
             return h.customDays.contains(dayOfWeek);
@@ -181,7 +181,7 @@ class WidgetService {
           e.date.year == date.year &&
           e.date.month == date.month &&
           e.date.day == date.day &&
-          h.isPositiveDay(e)
+          e.count > 0
         );
         return dayEntries.isNotEmpty;
       }).length;
@@ -210,7 +210,7 @@ class WidgetService {
         e.date.year == today.year &&
         e.date.month == today.month &&
         e.date.day == today.day &&
-        h.isPositiveDay(e)
+        e.count > 0
       );
       return todayEntries.isNotEmpty && !h.isArchived && !h.isPaused;
     }).length;

@@ -19,7 +19,7 @@ class _BulkEditScreenState extends State<BulkEditScreen> {
   final Set<String> _selectedHabitIds = {};
   bool _isSelectionMode = false;
   String _searchQuery = '';
-  String? _filterCategory;
+  HabitCategory? _filterCategory;
   HabitType? _filterType;
   bool? _filterArchived;
   
@@ -29,8 +29,7 @@ class _BulkEditScreenState extends State<BulkEditScreen> {
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
         if (!habit.name.toLowerCase().contains(query) &&
-            !(habit.notes?.toLowerCase().contains(query) ?? false) &&
-            !(habit.category?.toLowerCase().contains(query) ?? false)) {
+            !habit.category.displayName.toLowerCase().contains(query)) {
           return false;
         }
       }
@@ -54,14 +53,11 @@ class _BulkEditScreenState extends State<BulkEditScreen> {
     }).toList();
   }
   
-  List<String> get _availableCategories {
+  List<HabitCategory> get _availableCategories {
     final categories = widget.habits
         .map((h) => h.category)
-        .where((c) => c != null)
-        .cast<String>()
         .toSet()
         .toList();
-    categories.sort();
     return categories;
   }
   
@@ -194,7 +190,7 @@ class _BulkEditScreenState extends State<BulkEditScreen> {
                       // Category filter
                       if (_availableCategories.isNotEmpty)
                         FilterChip(
-                          label: Text(_filterCategory ?? 'All Categories'),
+                          label: Text(_filterCategory?.displayName ?? 'All Categories'),
                           selected: _filterCategory != null,
                           onSelected: (selected) => _showCategoryFilter(),
                         ),
@@ -377,15 +373,14 @@ class _BulkEditScreenState extends State<BulkEditScreen> {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (habit.category != null)
-              Text(
-                habit.category!,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w500,
-                ),
+            Text(
+              habit.category.displayName,
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w500,
               ),
+            ),
             Row(
               children: [
                 Text(
@@ -491,7 +486,7 @@ class _BulkEditScreenState extends State<BulkEditScreen> {
                 selected: _filterCategory == null,
               ),
               ..._availableCategories.map((category) => ListTile(
-                title: Text(category),
+                title: Text(category.displayName),
                 onTap: () {
                   setState(() => _filterCategory = category);
                   Navigator.pop(context);
@@ -626,17 +621,8 @@ class _BulkEditScreenState extends State<BulkEditScreen> {
   }
   
   Future<void> _pauseHabits(List<Habit> habits, bool pause) async {
-    final now = DateTime.now();
-    
     for (final habit in habits) {
       habit.isPaused = pause;
-      if (pause) {
-        habit.pauseStartDate = now;
-        habit.pauseEndDate = null; // Indefinite pause
-      } else {
-        habit.pauseStartDate = null;
-        habit.pauseEndDate = null;
-      }
       await StorageService.save(habit);
     }
     
@@ -652,64 +638,37 @@ class _BulkEditScreenState extends State<BulkEditScreen> {
   }
   
   Future<void> _changeCategoryDialog(List<Habit> habits) async {
-    final controller = TextEditingController();
-    String? selectedCategory;
+    HabitCategory? selectedCategory;
     
-    final result = await showDialog<String>(
+    final result = await showDialog<HabitCategory>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Change Category'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Select or enter a new category for ${habits.length} habit${habits.length == 1 ? '' : 's'}:'),
-            SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              initialValue: selectedCategory,
-              decoration: InputDecoration(
-                labelText: 'Existing Categories',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('Select category...'),
-                ),
-                ..._availableCategories.map((category) => 
-                  DropdownMenuItem(value: category, child: Text(category))
-                ),
-              ],
-              onChanged: (value) {
-                selectedCategory = value;
-                if (value != null) {
-                  controller.text = value;
-                }
-              },
-            ),
-            SizedBox(height: 16),
-            TextFormField(
-              controller: controller,
-              decoration: InputDecoration(
-                labelText: 'Or enter new category',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Text('Select a new category for ${habits.length} habit${habits.length == 1 ? '' : 's'}:'),
+              SizedBox(height: 16),
+              ...HabitCategory.values.map((category) => ListTile(
+                title: Text(category.displayName),
+                onTap: () => Navigator.pop(context, category),
+                selected: selectedCategory == category,
+              )),
+            ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: Text('Cancel'),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: Text('Change'),
-          ),
         ],
       ),
     );
     
-    if (result != null && result.isNotEmpty) {
+    if (result != null) {
       for (final habit in habits) {
         habit.category = result;
         await StorageService.save(habit);
@@ -720,7 +679,7 @@ class _BulkEditScreenState extends State<BulkEditScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${habits.length} habit${habits.length == 1 ? '' : 's'} moved to "$result"',
+            '${habits.length} habit${habits.length == 1 ? '' : 's'} moved to "${result.displayName}"',
           ),
         ),
       );

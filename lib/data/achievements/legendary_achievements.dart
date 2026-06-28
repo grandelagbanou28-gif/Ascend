@@ -262,7 +262,7 @@ bool _checkFlawlessYear(Habit habit) {
       .toList();
   
   return yearEntries.length >= 365 && 
-         yearEntries.every((entry) => habit.isPositiveDay(entry));
+         yearEntries.every((entry) => entry.count > 0);
 }
 
 bool _checkFlawlessTwoYears(Habit habit) {
@@ -273,7 +273,7 @@ bool _checkFlawlessTwoYears(Habit habit) {
       .toList();
   
   return twoYearEntries.length >= 730 && 
-         twoYearEntries.every((entry) => habit.isPositiveDay(entry));
+         twoYearEntries.every((entry) => entry.count > 0);
 }
 
 bool _checkDecadeMaster(Habit habit) {
@@ -334,7 +334,7 @@ bool _checkHabitSage(Habit habit) {
   
   if (fiveYearEntries.length < 1500) return false;
   
-  final successRate = fiveYearEntries.where((e) => habit.isPositiveDay(e)).length / fiveYearEntries.length * 100;
+  final successRate = fiveYearEntries.where((e) => e.count > 0).length / fiveYearEntries.length * 100;
   return successRate >= 95;
 }
 

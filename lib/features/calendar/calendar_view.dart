@@ -74,7 +74,7 @@ class _CalendarViewState extends State<CalendarView> {
       return Colors.orange.withValues(alpha: 0.4); // Skipped
     }
     
-    if (widget.habit.isPositiveDay(entry)) {
+    if (entry.count > 0) {
       return Colors.green.withValues(alpha: 0.6); // Success
     } else {
       return Colors.red.withValues(alpha: 0.6); // Failure
@@ -101,16 +101,17 @@ class _CalendarViewState extends State<CalendarView> {
     switch (widget.habit.frequency) {
       case HabitFrequency.Daily:
         return true;
-      case HabitFrequency.Weekdays:
+      case HabitFrequency.MondayOnly:
         return day.weekday <= 5; // Monday = 1, Friday = 5
-      case HabitFrequency.Weekends:
+      case HabitFrequency.Weekend:
         return day.weekday > 5; // Saturday = 6, Sunday = 7
       case HabitFrequency.CustomDays:
         final dayIndex = day.weekday % 7; // Convert to 0=Sunday format
         return widget.habit.customDays.contains(dayIndex);
-      case HabitFrequency.XTimesPerWeek:
-      case HabitFrequency.XTimesPerMonth:
-        // For frequency-based habits, don't mark individual days as missed
+      case HabitFrequency.Every2Days:
+        return true;
+      case HabitFrequency.Weekly:
+      case HabitFrequency.Monthly:
         return false;
     }
   }
@@ -361,7 +362,7 @@ class _CalendarViewState extends State<CalendarView> {
   }
 
   Widget _buildEntryInfo(HabitEntry entry) {
-    final isPositive = widget.habit.isPositiveDay(entry);
+    final isPositive = entry.count > 0;
     
     return Container(
       margin: EdgeInsets.only(bottom: 8),
@@ -429,7 +430,7 @@ class _CalendarViewState extends State<CalendarView> {
           if (entry.value != null) ...[
             SizedBox(height: 4),
             Text(
-              '${entry.value} ${entry.unit ?? widget.habit.getUnitDisplayName()}',
+              '${entry.value} ${entry.unit ?? widget.habit.targetUnit ?? ''}',
               style: TextStyle(fontSize: 14),
             ),
           ] else if (entry.count > 0) ...[

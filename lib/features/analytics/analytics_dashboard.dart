@@ -86,21 +86,17 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> with TickerProv
       final filteredHabit = Habit(
         name: habit.name,
         type: habit.type,
-        displayMode: habit.displayMode,
         icon: habit.icon,
         color: habit.color,
         isArchived: habit.isArchived,
-        notes: habit.notes,
         reminderHour: habit.reminderHour,
         reminderMinute: habit.reminderMinute,
         hasReminder: habit.hasReminder,
         category: habit.category,
         frequency: habit.frequency,
         customDays: habit.customDays,
-        targetFrequency: habit.targetFrequency,
         targetValue: habit.targetValue,
-        unit: habit.unit,
-        customUnit: habit.customUnit,
+        targetUnit: habit.targetUnit,
         entries: filteredEntries,
       );
       
@@ -745,7 +741,7 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> with TickerProv
           DateTime(entry.date.year, entry.date.month, entry.date.day));
       
       groupedEntries.forEach((date, entries) {
-        final positiveEntries = entries.where((e) => habit.isPositiveDay(e)).length;
+        final positiveEntries = entries.where((e) => e.count > 0).length;
         final successRate = (positiveEntries / entries.length) * 100;
         points.add(ChartDataPoint(date, successRate));
       });
@@ -761,7 +757,7 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> with TickerProv
   }
 
   List<HabitTrendData> _generateValueTrendData() {
-    return _filteredHabits.where((h) => h.unit != HabitUnit.Count).take(3).map((habit) {
+    return _filteredHabits.where((h) => h.targetUnit != null && h.targetUnit!.isNotEmpty).take(3).map((habit) {
       List<ChartDataPoint> points = [];
       
       for (var entry in habit.entries) {
@@ -803,17 +799,25 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> with TickerProv
       Color color;
       
       switch (entry.key) {
-        case HabitType.SuccessBased:
+        case HabitType.Positive:
           label = 'Achieve';
           color = Colors.green;
           break;
-        case HabitType.FailBased:
+        case HabitType.Negative:
           label = 'Avoid';
           color = Colors.red;
           break;
-        case HabitType.DoneBased:
+        case HabitType.Counting:
           label = 'Check';
           color = Colors.blue;
+          break;
+        case HabitType.Measurable:
+          label = 'Measurable';
+          color = Colors.purple;
+          break;
+        case HabitType.Timed:
+          label = 'Timed';
+          color = Colors.orange;
           break;
       }
       
@@ -825,7 +829,7 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> with TickerProv
     final Map<String, int> categoryCount = {};
     
     for (var habit in _filteredHabits) {
-      final category = habit.category ?? 'Uncategorized';
+      final category = habit.category.displayName;
       categoryCount[category] = (categoryCount[category] ?? 0) + 1;
     }
     
@@ -897,8 +901,8 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> with TickerProv
           DateTime(e.date.year, e.date.month, e.date.day) == date);
       
       if (entry1 != null && entry2 != null) {
-        final success1 = habit1.isPositiveDay(entry1);
-        final success2 = habit2.isPositiveDay(entry2);
+        final success1 = entry1.count > 0;
+        final success2 = entry2.count > 0;
         
         if (success1 && success2) {
           bothSuccess++;
@@ -923,11 +927,17 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> with TickerProv
     if (_filteredHabits.isEmpty) return insights;
     
     // Best performing habit
-    final bestHabit = _filteredHabits.reduce((a, b) => 
-        a.successRate > b.successRate ? a : b);
+    final bestHabit = _filteredHabits.reduce((a, b) {
+      final rateA = a.entries.isEmpty ? 0.0 : (a.totalCompletions / a.entries.length * 100);
+      final rateB = b.entries.isEmpty ? 0.0 : (b.totalCompletions / b.entries.length * 100);
+      return rateA > rateB ? a : b;
+    });
+    final bestRate = bestHabit.entries.isEmpty
+        ? 0.0
+        : (bestHabit.totalCompletions / bestHabit.entries.length * 100);
     insights.add(InsightData(
       title: 'Best Performer',
-      description: '${bestHabit.formattedName} has ${bestHabit.successRate.toStringAsFixed(1)}% success rate',
+      description: '${bestHabit.formattedName} has ${bestRate.toStringAsFixed(1)}% success rate',
       icon: Icons.star,
       color: Colors.green,
     ));
@@ -975,7 +985,10 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> with TickerProv
     List<RecommendationData> recommendations = [];
     
     // Check for habits with low success rates
-    final strugglingHabits = _filteredHabits.where((h) => h.successRate < 50 && h.entries.length > 5).toList();
+    final strugglingHabits = _filteredHabits.where((h) {
+      if (h.entries.isEmpty) return false;
+      return (h.totalCompletions / h.entries.length * 100) < 50 && h.entries.length > 5;
+    }).toList();
     
     if (strugglingHabits.isNotEmpty) {
       recommendations.add(RecommendationData(

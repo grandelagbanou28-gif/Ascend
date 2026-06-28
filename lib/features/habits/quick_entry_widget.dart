@@ -33,7 +33,7 @@ class _QuickEntryWidgetState extends State<QuickEntryWidget> {
       e.date.year == today.year &&
       e.date.month == today.month &&
       e.date.day == today.day &&
-      h.isPositiveDay(e)
+      e.count > 0
     );
     return todayEntries.isNotEmpty;
   }).toList();
@@ -175,16 +175,20 @@ class _QuickEntryWidgetState extends State<QuickEntryWidget> {
   
   String _getSubtitleText(Habit habit) {
     if (habit.targetValue != null) {
-      return 'Target: ${habit.targetValue} ${habit.getUnitDisplayName()}';
+      return 'Target: ${habit.targetValue} ${habit.targetUnit ?? ''}';
     }
     
     switch (habit.type) {
-      case HabitType.DoneBased:
+      case HabitType.Counting:
         return 'Tap to mark as done';
-      case HabitType.SuccessBased:
+      case HabitType.Positive:
         return 'Track your progress';
-      case HabitType.FailBased:
+      case HabitType.Negative:
         return 'Avoid or track failure';
+      case HabitType.Measurable:
+        return 'Track your progress';
+      case HabitType.Timed:
+        return 'Track your progress';
     }
   }
   
@@ -200,7 +204,7 @@ class _QuickEntryWidgetState extends State<QuickEntryWidget> {
       );
     }
     
-    if (habit.type == HabitType.DoneBased && habit.unit == HabitUnit.Count) {
+    if (habit.type == HabitType.Counting) {
       // Quick complete button for simple done-based habits
       return GestureDetector(
         onTap: () => _quickComplete(habit),
@@ -385,7 +389,7 @@ class _QuickEntryDialogState extends State<QuickEntryDialog> {
             
             SizedBox(height: 24),
             
-            if (widget.habit.type == HabitType.DoneBased && widget.habit.unit == HabitUnit.Count) ...[
+            if (widget.habit.type == HabitType.Counting) ...[
               // Simple done/not done
               Container(
                 padding: EdgeInsets.all(16),
@@ -445,7 +449,7 @@ class _QuickEntryDialogState extends State<QuickEntryDialog> {
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 decoration: InputDecoration(
-                  labelText: widget.habit.getUnitDisplayName(),
+                  labelText: widget.habit.targetUnit ?? '',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   filled: true,
                 ),
@@ -543,11 +547,11 @@ class _QuickEntryDialogState extends State<QuickEntryDialog> {
     final entry = HabitEntry(
       date: DateTime.now(),
       dayNumber: widget.habit.getNextDayNumber(),
-      count: widget.habit.type == HabitType.DoneBased && widget.habit.unit == HabitUnit.Count
+      count: widget.habit.type == HabitType.Counting
           ? (_isDone ? 1 : 0)
           : _quickValue,
-      value: widget.habit.unit != HabitUnit.Count ? _quickValue.toDouble() : null,
-      unit: widget.habit.unit != HabitUnit.Count ? widget.habit.getUnitDisplayName() : null,
+      value: widget.habit.type != HabitType.Counting ? _quickValue.toDouble() : null,
+      unit: widget.habit.targetUnit,
       notes: 'Quick entry',
     );
     

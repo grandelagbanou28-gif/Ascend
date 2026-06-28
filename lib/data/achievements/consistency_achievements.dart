@@ -222,7 +222,7 @@ bool _checkPerfectDays(Habit habit, int targetDays) {
       .toList();
   
   return recentEntries.length >= targetDays && 
-         recentEntries.every((entry) => habit.isPositiveDay(entry));
+         recentEntries.every((entry) => entry.count > 0);
 }
 
 bool _checkComebackStory(Habit habit) {
@@ -232,8 +232,8 @@ bool _checkComebackStory(Habit habit) {
   final earlyEntries = habit.entries.take(10).toList();
   final recentEntries = habit.entries.skip(habit.entries.length - 10).toList();
   
-  final earlySuccess = earlyEntries.where((e) => habit.isPositiveDay(e)).length / earlyEntries.length * 100;
-  final recentSuccess = recentEntries.where((e) => habit.isPositiveDay(e)).length / recentEntries.length * 100;
+  final earlySuccess = earlyEntries.where((e) => e.count > 0).length / earlyEntries.length * 100;
+  final recentSuccess = recentEntries.where((e) => e.count > 0).length / recentEntries.length * 100;
   
   return earlySuccess <= 30 && recentSuccess >= 80;
 }
@@ -244,8 +244,8 @@ bool _checkTurnaroundStory(Habit habit) {
   final earlyEntries = habit.entries.take(15).toList();
   final recentEntries = habit.entries.skip(habit.entries.length - 15).toList();
   
-  final earlySuccess = earlyEntries.where((e) => habit.isPositiveDay(e)).length / earlyEntries.length * 100;
-  final recentSuccess = recentEntries.where((e) => habit.isPositiveDay(e)).length / recentEntries.length * 100;
+  final earlySuccess = earlyEntries.where((e) => e.count > 0).length / earlyEntries.length * 100;
+  final recentSuccess = recentEntries.where((e) => e.count > 0).length / recentEntries.length * 100;
   
   return earlySuccess <= 20 && recentSuccess >= 90;
 }
@@ -269,7 +269,7 @@ bool _checkSteadyPattern(Habit habit) {
         .toList();
     
     if (weekEntries.isNotEmpty) {
-      final weekRate = weekEntries.where((e) => habit.isPositiveDay(e)).length / weekEntries.length * 100;
+      final weekRate = weekEntries.where((e) => e.count > 0).length / weekEntries.length * 100;
       weeklyRates.add(weekRate);
     }
   }
@@ -308,7 +308,7 @@ bool _checkNeverMissTwice(Habit habit) {
     final current = recentEntries[i];
     final next = recentEntries[i + 1];
     
-    if (!habit.isPositiveDay(current) && !habit.isPositiveDay(next)) {
+    if (current.count <= 0 && next.count <= 0) {
       // Check if they are consecutive days
       if (next.date.difference(current.date).inDays == 1) {
         return false;
@@ -326,7 +326,7 @@ bool _checkLongTermConsistency(Habit habit) {
       .where((entry) => DateTime.now().difference(entry.date).inDays <= 180)
       .toList();
   
-  final successRate = recentEntries.where((e) => habit.isPositiveDay(e)).length / recentEntries.length * 100;
+  final successRate = recentEntries.where((e) => e.count > 0).length / recentEntries.length * 100;
   return successRate >= 85;
 }
 
@@ -337,6 +337,6 @@ bool _checkYearlyConsistency(Habit habit) {
       .where((entry) => DateTime.now().difference(entry.date).inDays <= 365)
       .toList();
   
-  final successRate = recentEntries.where((e) => habit.isPositiveDay(e)).length / recentEntries.length * 100;
+  final successRate = recentEntries.where((e) => e.count > 0).length / recentEntries.length * 100;
   return successRate >= 90;
 } 

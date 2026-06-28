@@ -99,8 +99,11 @@ class _BackupImportScreenState extends State<BackupImportScreen> {
   
   Widget _buildSummaryCard() {
     final totalEntries = _habits.fold(0, (sum, h) => sum + h.entries.length);
-    final avgSuccessRate = _habits.isEmpty ? 0.0 : 
-        _habits.fold(0.0, (sum, h) => sum + h.successRate) / _habits.length;
+    final avgSuccessRate = _habits.isEmpty ? 0.0 :
+        _habits.fold(0.0, (sum, h) {
+          final rate = h.entries.isEmpty ? 0.0 : (h.entries.where((e) => e.count > 0).length / h.entries.length) * 100;
+          return sum + rate;
+        }) / _habits.length;
     
     return Container(
       padding: EdgeInsets.all(20),

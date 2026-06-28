@@ -8,6 +8,7 @@ import 'package:ascend/features/settings/settings_screen.dart';
 import 'package:ascend/features/analytics/analytics_dashboard.dart';
 import 'package:ascend/core/services/reports_service.dart';
 import 'package:ascend/data/models/habit.dart';
+import 'package:ascend/core/enums/app_enums.dart';
 import 'package:ascend/features/habits/habit_detail_screen.dart';
 import 'package:ascend/data/models/habit_entry.dart';
 import 'package:ascend/core/services/storage_service.dart';
@@ -57,8 +58,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   int _bestCurrentStreak = 0;
   String _bestStreakHabit = '';
   bool _showArchived = false;
-  String? _selectedCategory;
-  List<String> _categories = [];
+  HabitCategory? _selectedCategory;
+  List<HabitCategory> _categories = [];
   
   // Dashboard state
   UserProfile? _profile;
@@ -148,8 +149,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     
     // Extract categories
     final categories = active
-        .where((h) => h.category != null)
-        .map((h) => h.category!)
+        .map((h) => h.category)
         .toSet()
         .toList()
       ..sort();
@@ -167,8 +167,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     String bestStreakHabit = '';
     
     for (var habit in filtered) {
-      totalPositive += habit.positiveCount;
-      totalNegative += habit.negativeCount;
+      totalPositive += habit.entries.where((e) => e.count > 0).length;
+      totalNegative += habit.entries.where((e) => e.count <= 0).length;
       totalEntries += habit.entries.length;
       
       if (habit.currentStreak > bestStreak) {
@@ -235,7 +235,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   
   Future<void> _loadWidgetSettings() async {
-    _showQuoteWidget = await SettingsService.getShowMotivationalQuotes();
+    _showQuoteWidget = await SettingsService.getMotivationalQuotes();
     _showCalendarWidget = true; // Default
     _showProgressionWidget = true; // Default
     _showChallengesWidget = true; // Default
@@ -245,20 +245,11 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   void _showAddHabit() {
-    // Get existing categories
-    final existingCategories = _activeHabits
-        .where((h) => h.category != null)
-        .map((h) => h.category!)
-        .toSet()
-        .toList()
-        ..sort();
-    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => AddHabitSheet(
-        existingCategories: existingCategories,
         onSave: (h) async {
           if (h.name.isEmpty) return;
           await StorageService.save(h);
@@ -295,7 +286,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           children: [
             ListTile(
               title: Text('All Categories'),
-              leading: Radio<String?>(
+              leading: Radio<HabitCategory?>(
                 value: null,
                 groupValue: _selectedCategory,
                 onChanged: (value) {
@@ -306,8 +297,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               ),
             ),
             ..._categories.map((category) => ListTile(
-              title: Text(category),
-              leading: Radio<String?>(
+              title: Text(category.displayName),
+              leading: Radio<HabitCategory?>(
                 value: category,
                 groupValue: _selectedCategory,
                 onChanged: (value) {
@@ -485,7 +476,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               style: TextStyle(fontWeight: FontWeight.bold)),
             if (!_showArchived && _selectedCategory != null)
               Text(
-                'Category: $_selectedCategory',
+                'Category: ${_selectedCategory!.displayName}',
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
               ),
           ],

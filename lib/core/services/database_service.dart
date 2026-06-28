@@ -24,53 +24,54 @@ class DatabaseService {
     String path = join(await getDatabasesPath(), 'ascend_habits.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDatabase,
-      // Enable foreign key support
+      onUpgrade: _onUpgrade,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON');
       },
     );
   }
   
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Drop old tables and recreate
+      await db.execute('DROP TABLE IF EXISTS habits');
+      await db.execute('DROP TABLE IF EXISTS entries');
+      await db.execute('DROP TABLE IF EXISTS custom_days');
+      await db.execute('DROP TABLE IF EXISTS unlocked_achievements');
+      await db.execute('DROP TABLE IF EXISTS unlocked_themes');
+      await db.execute('DROP TABLE IF EXISTS unlocked_icons');
+      await db.execute('DROP TABLE IF EXISTS motivational_messages');
+      await _createDatabase(db, newVersion);
+    }
+  }
+  
   Future<void> _createDatabase(Database db, int version) async {
-    // Create habits table
     await db.execute('''
       CREATE TABLE habits(
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
+        description TEXT,
         type INTEGER NOT NULL,
-        displayMode INTEGER NOT NULL,
+        category INTEGER NOT NULL,
         icon INTEGER,
         color INTEGER,
-        isArchived INTEGER NOT NULL,
-        notes TEXT,
+        frequency INTEGER NOT NULL,
+        targetValue REAL,
+        targetUnit TEXT,
         reminderHour INTEGER,
         reminderMinute INTEGER,
         hasReminder INTEGER NOT NULL,
-        category TEXT,
-        frequency INTEGER NOT NULL,
-        targetFrequency INTEGER,
-        targetValue REAL,
-        unit INTEGER NOT NULL,
-        customUnit TEXT,
-        pauseStartDate TEXT,
-        pauseEndDate TEXT,
+        priority INTEGER NOT NULL,
+        durationMinutes INTEGER NOT NULL,
+        isArchived INTEGER NOT NULL,
         isPaused INTEGER NOT NULL,
-        totalPoints INTEGER NOT NULL,
-        level INTEGER NOT NULL,
-        experiencePoints REAL NOT NULL,
-        locationReminder TEXT,
-        reminderLatitude REAL,
-        reminderLongitude REAL,
-        reminderRadius REAL,
-        difficultyMultiplier REAL NOT NULL,
-        customSuccessMessage TEXT,
-        customFailureMessage TEXT
+        createdAt TEXT NOT NULL,
+        completedAt TEXT
       )
     ''');
     
-    // Create entries table
     await db.execute('''
       CREATE TABLE entries(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,52 +87,11 @@ class DatabaseService {
       )
     ''');
     
-    // Create custom_days table for the many-to-many relationship
     await db.execute('''
       CREATE TABLE custom_days(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         habitId TEXT NOT NULL,
         dayIndex INTEGER NOT NULL,
-        FOREIGN KEY (habitId) REFERENCES habits (id) ON DELETE CASCADE
-      )
-    ''');
-    
-    // Create unlocked_achievements table
-    await db.execute('''
-      CREATE TABLE unlocked_achievements(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        habitId TEXT NOT NULL,
-        achievement TEXT NOT NULL,
-        FOREIGN KEY (habitId) REFERENCES habits (id) ON DELETE CASCADE
-      )
-    ''');
-    
-    // Create unlocked_themes table
-    await db.execute('''
-      CREATE TABLE unlocked_themes(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        habitId TEXT NOT NULL,
-        theme TEXT NOT NULL,
-        FOREIGN KEY (habitId) REFERENCES habits (id) ON DELETE CASCADE
-      )
-    ''');
-    
-    // Create unlocked_icons table
-    await db.execute('''
-      CREATE TABLE unlocked_icons(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        habitId TEXT NOT NULL,
-        iconCode INTEGER NOT NULL,
-        FOREIGN KEY (habitId) REFERENCES habits (id) ON DELETE CASCADE
-      )
-    ''');
-    
-    // Create motivational_messages table
-    await db.execute('''
-      CREATE TABLE motivational_messages(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        habitId TEXT NOT NULL,
-        message TEXT NOT NULL,
         FOREIGN KEY (habitId) REFERENCES habits (id) ON DELETE CASCADE
       )
     ''');
@@ -183,90 +143,28 @@ class DatabaseService {
     );
     List<int> customDays = dayMaps.map((dayMap) => dayMap['dayIndex'] as int).toList();
     
-    // Load unlocked achievements
-    final List<Map<String, dynamic>> achievementMaps = await db.query(
-      'unlocked_achievements',
-      where: 'habitId = ?',
-      whereArgs: [habitId],
-    );
-    List<String> unlockedAchievements = achievementMaps.map((map) => map['achievement'] as String).toList();
-    
-    // Load unlocked themes
-    final List<Map<String, dynamic>> themeMaps = await db.query(
-      'unlocked_themes',
-      where: 'habitId = ?',
-      whereArgs: [habitId],
-    );
-    List<String> unlockedThemes = themeMaps.map((map) => map['theme'] as String).toList();
-    if (unlockedThemes.isEmpty) {
-      unlockedThemes = ['default'];
-    }
-    
-    // Load unlocked icons
-    final List<Map<String, dynamic>> iconMaps = await db.query(
-      'unlocked_icons',
-      where: 'habitId = ?',
-      whereArgs: [habitId],
-    );
-    List<IconData> unlockedIcons = iconMaps.map((map) {
-      return IconData(map['iconCode'], fontFamily: 'MaterialIcons');
-    }).toList();
-    
-    // Load motivational messages
-    final List<Map<String, dynamic>> messageMaps = await db.query(
-      'motivational_messages',
-      where: 'habitId = ?',
-      whereArgs: [habitId],
-    );
-    List<String> motivationalMessages = messageMaps.map((map) => map['message'] as String).toList();
-    if (motivationalMessages.isEmpty) {
-      motivationalMessages = [
-        "You've got this! 💪",
-        "Every day is a new opportunity! ✨",
-        "Small steps lead to big changes! 🚀",
-        "Consistency is key! 🔑",
-        "Believe in yourself! 🌟"
-      ];
-    }
-    
-    // Create the habit object
     return Habit(
       id: habitMap['id'],
       name: habitMap['name'],
+      description: habitMap['description'],
       type: HabitType.values[habitMap['type']],
-      displayMode: ReportDisplay.values[habitMap['displayMode']],
+      category: HabitCategory.values[habitMap['category']],
       icon: habitMap['icon'] != null ? IconData(habitMap['icon'], fontFamily: 'MaterialIcons') : null,
       color: habitMap['color'] != null ? Color(habitMap['color']) : null,
-      isArchived: habitMap['isArchived'] == 1,
-      notes: habitMap['notes'],
+      frequency: HabitFrequency.values[habitMap['frequency']],
+      customDays: customDays,
+      targetValue: habitMap['targetValue']?.toDouble(),
+      targetUnit: habitMap['targetUnit'],
       reminderHour: habitMap['reminderHour'],
       reminderMinute: habitMap['reminderMinute'],
       hasReminder: habitMap['hasReminder'] == 1,
-      category: habitMap['category'],
-      frequency: HabitFrequency.values[habitMap['frequency']],
-      customDays: customDays,
-      targetFrequency: habitMap['targetFrequency'],
-      targetValue: habitMap['targetValue'],
-      unit: HabitUnit.values[habitMap['unit']],
-      customUnit: habitMap['customUnit'],
-      pauseStartDate: habitMap['pauseStartDate'] != null ? DateTime.parse(habitMap['pauseStartDate']) : null,
-      pauseEndDate: habitMap['pauseEndDate'] != null ? DateTime.parse(habitMap['pauseEndDate']) : null,
+      priority: HabitPriority.values[habitMap['priority']],
+      durationMinutes: habitMap['durationMinutes'] ?? 0,
+      isArchived: habitMap['isArchived'] == 1,
       isPaused: habitMap['isPaused'] == 1,
       entries: entries,
-      totalPoints: habitMap['totalPoints'],
-      level: habitMap['level'],
-      experiencePoints: habitMap['experiencePoints'],
-      unlockedAchievements: unlockedAchievements,
-      unlockedThemes: unlockedThemes,
-      unlockedIcons: unlockedIcons,
-      locationReminder: habitMap['locationReminder'],
-      reminderLatitude: habitMap['reminderLatitude'],
-      reminderLongitude: habitMap['reminderLongitude'],
-      reminderRadius: habitMap['reminderRadius'],
-      difficultyMultiplier: habitMap['difficultyMultiplier'],
-      motivationalMessages: motivationalMessages,
-      customSuccessMessage: habitMap['customSuccessMessage'],
-      customFailureMessage: habitMap['customFailureMessage'],
+      createdAt: DateTime.parse(habitMap['createdAt']),
+      completedAt: habitMap['completedAt'] != null ? DateTime.parse(habitMap['completedAt']) : null,
     );
   }
   
@@ -274,40 +172,28 @@ class DatabaseService {
     final db = await database;
     
     await db.transaction((txn) async {
-      // Save the habit
       await txn.insert(
         'habits',
         {
           'id': habit.id,
           'name': habit.name,
+          'description': habit.description,
           'type': habit.type.index,
-          'displayMode': habit.displayMode.index,
+          'category': habit.category.index,
           'icon': habit.icon?.codePoint,
           'color': habit.color?.value,
-          'isArchived': habit.isArchived ? 1 : 0,
-          'notes': habit.notes,
+          'frequency': habit.frequency.index,
+          'targetValue': habit.targetValue,
+          'targetUnit': habit.targetUnit,
           'reminderHour': habit.reminderHour,
           'reminderMinute': habit.reminderMinute,
           'hasReminder': habit.hasReminder ? 1 : 0,
-          'category': habit.category,
-          'frequency': habit.frequency.index,
-          'targetFrequency': habit.targetFrequency,
-          'targetValue': habit.targetValue,
-          'unit': habit.unit.index,
-          'customUnit': habit.customUnit,
-          'pauseStartDate': habit.pauseStartDate?.toIso8601String(),
-          'pauseEndDate': habit.pauseEndDate?.toIso8601String(),
+          'priority': habit.priority.index,
+          'durationMinutes': habit.durationMinutes,
+          'isArchived': habit.isArchived ? 1 : 0,
           'isPaused': habit.isPaused ? 1 : 0,
-          'totalPoints': habit.totalPoints,
-          'level': habit.level,
-          'experiencePoints': habit.experiencePoints,
-          'locationReminder': habit.locationReminder,
-          'reminderLatitude': habit.reminderLatitude,
-          'reminderLongitude': habit.reminderLongitude,
-          'reminderRadius': habit.reminderRadius,
-          'difficultyMultiplier': habit.difficultyMultiplier,
-          'customSuccessMessage': habit.customSuccessMessage,
-          'customFailureMessage': habit.customFailureMessage,
+          'createdAt': habit.createdAt.toIso8601String(),
+          'completedAt': habit.completedAt?.toIso8601String(),
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -346,74 +232,6 @@ class DatabaseService {
           },
         );
       }
-      
-      // Delete and re-insert unlocked achievements
-      await txn.delete(
-        'unlocked_achievements',
-        where: 'habitId = ?',
-        whereArgs: [habit.id],
-      );
-      
-      for (var achievement in habit.unlockedAchievements) {
-        await txn.insert(
-          'unlocked_achievements',
-          {
-            'habitId': habit.id,
-            'achievement': achievement,
-          },
-        );
-      }
-      
-      // Delete and re-insert unlocked themes
-      await txn.delete(
-        'unlocked_themes',
-        where: 'habitId = ?',
-        whereArgs: [habit.id],
-      );
-      
-      for (var theme in habit.unlockedThemes) {
-        await txn.insert(
-          'unlocked_themes',
-          {
-            'habitId': habit.id,
-            'theme': theme,
-          },
-        );
-      }
-      
-      // Delete and re-insert unlocked icons
-      await txn.delete(
-        'unlocked_icons',
-        where: 'habitId = ?',
-        whereArgs: [habit.id],
-      );
-      
-      for (var icon in habit.unlockedIcons) {
-        await txn.insert(
-          'unlocked_icons',
-          {
-            'habitId': habit.id,
-            'iconCode': icon.codePoint,
-          },
-        );
-      }
-      
-      // Delete and re-insert motivational messages
-      await txn.delete(
-        'motivational_messages',
-        where: 'habitId = ?',
-        whereArgs: [habit.id],
-      );
-      
-      for (var message in habit.motivationalMessages) {
-        await txn.insert(
-          'motivational_messages',
-          {
-            'habitId': habit.id,
-            'message': message,
-          },
-        );
-      }
     });
   }
   
@@ -430,7 +248,6 @@ class DatabaseService {
     final db = await database;
     
     await db.transaction((txn) async {
-      // Find the entry
       final List<Map<String, dynamic>> entries = await txn.query(
         'entries',
         where: 'habitId = ? AND dayNumber = ?',
@@ -438,7 +255,6 @@ class DatabaseService {
       );
       
       if (entries.isNotEmpty) {
-        // Update the entry
         await txn.update(
           'entries',
           {
@@ -454,7 +270,6 @@ class DatabaseService {
           whereArgs: [entries.first['id']],
         );
         
-        // Update the habit object
         final index = habit.entries.indexWhere((e) => e.dayNumber == oldEntry.dayNumber);
         if (index != -1) {
           habit.entries[index] = newEntry;
@@ -473,15 +288,13 @@ class DatabaseService {
         whereArgs: [habit.id, entry.dayNumber],
       );
       
-      // Update the habit object
       habit.entries.removeWhere((e) => e.dayNumber == entry.dayNumber);
     });
   }
   
-  // Method to migrate data from JSON to SQLite
   Future<void> migrateFromJson(List<Habit> habits) async {
     for (var habit in habits) {
       await saveHabit(habit);
     }
   }
-} 
+}

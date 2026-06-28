@@ -296,19 +296,17 @@ class HabitListItem extends StatelessWidget {
                             ],
                           ],
                         ),
-                        if (habit.category != null) ...[
-                          SizedBox(height: 2),
-                          Text(
-                            habit.category!,
-                            style: TextStyle(
-                              fontSize: isCompact ? 9 : 11,
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                        SizedBox(height: 2),
+                        Text(
+                          habit.category.displayName,
+                          style: TextStyle(
+                            fontSize: isCompact ? 9 : 11,
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w500,
                           ),
-                        ],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ],
                     ),
                   ),
@@ -316,19 +314,9 @@ class HabitListItem extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      if (habit.type == HabitType.FailBased && habit.hasEntries) ...[
+                       if (showSuccessRate) ...[
                         Text(
-                          habit.getTimeSinceLastFailure(),
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: habit.color ?? Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                            fontSize: isCompact ? 13 : 16,
-                          ),
-                          textAlign: TextAlign.end,
-                        ),
-                      ] else if (showSuccessRate) ...[
-                        Text(
-                          '${habit.successRate.toStringAsFixed(0)}%',
+                          '${habit.entries.isEmpty ? 0 : ((habit.entries.where((e) => e.count > 0).length / habit.entries.length) * 100).toStringAsFixed(0)}%',
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             color: habit.color ?? Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.bold,
@@ -361,29 +349,6 @@ class HabitListItem extends StatelessWidget {
                   ),
                 ],
               ),
-              if (habit.notes != null && habit.notes!.isNotEmpty) ...[
-                SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: Text(
-                    habit.notes!,
-                    style: TextStyle(
-                      fontSize: isCompact ? 10 : 12, 
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
               if (!isCompact) ...[
                 SizedBox(height: 8),
                 Text(
@@ -404,15 +369,21 @@ class HabitListItem extends StatelessWidget {
   
   String _getHabitStatusText(Habit habit) {
     switch (habit.type) {
-      case HabitType.FailBased:
+      case HabitType.Negative:
         final total = habit.entries.fold(0.0, (sum, e) => sum + (e.value ?? e.count.toDouble()));
-        return 'Failures: ${total.toStringAsFixed(1)} ${habit.getUnitDisplayName()}';
-      case HabitType.SuccessBased:
+        return 'Failures: ${total.toStringAsFixed(1)} ${habit.targetUnit ?? ''}';
+      case HabitType.Positive:
         final total = habit.entries.fold(0.0, (sum, e) => sum + (e.value ?? e.count.toDouble()));
-        return 'Successes: ${total.toStringAsFixed(1)} ${habit.getUnitDisplayName()}';
-      case HabitType.DoneBased:
+        return 'Successes: ${total.toStringAsFixed(1)} ${habit.targetUnit ?? ''}';
+      case HabitType.Counting:
         final total = habit.entries.fold(0, (sum, e) => sum + e.count);
         return 'Completed $total time${total != 1 ? 's' : ''}';
+      case HabitType.Measurable:
+        final total = habit.entries.fold(0.0, (sum, e) => sum + (e.value ?? e.count.toDouble()));
+        return 'Measured: ${total.toStringAsFixed(1)} ${habit.targetUnit ?? ''}';
+      case HabitType.Timed:
+        final total = habit.entries.fold(0, (sum, e) => sum + e.count);
+        return 'Timed $total time${total != 1 ? 's' : ''}';
     }
   }
 }

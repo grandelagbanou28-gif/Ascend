@@ -271,39 +271,9 @@ class NotificationService {
   }
 
   // Location-based notifications (requires location permissions)
+  // Location reminders are not supported in the current model
   static Future<void> setupLocationReminder(Habit habit) async {
-    if (habit.reminderLatitude == null || habit.reminderLongitude == null) {
-      return;
-    }
-
-    // Check location permission
-    final permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      final newPermission = await Geolocator.requestPermission();
-      if (newPermission == LocationPermission.denied) {
-        return;
-      }
-    }
-
-    // This is a simplified version - in a full implementation,
-    // you'd set up geofencing or periodic location checks
-    final currentPosition = await Geolocator.getCurrentPosition();
-    final distance = Geolocator.distanceBetween(
-      currentPosition.latitude,
-      currentPosition.longitude,
-      habit.reminderLatitude!,
-      habit.reminderLongitude!,
-    );
-
-    final radius = habit.reminderRadius ?? 100; // Default 100m radius
-
-    if (distance <= radius) {
-      await showInstantNotification(
-        title: 'Location Reminder 📍',
-        body: 'You\'re near your ${habit.locationReminder} location! Time for ${habit.name}?',
-        payload: 'open_habit|${habit.id}',
-      );
-    }
+    // No-op: location reminders removed from model
   }
 
   // Daily summary notification
@@ -313,7 +283,7 @@ class NotificationService {
       final today = DateTime.now();
       final todayEntries = h.entries.where(
         (e) =>
-            e.date.year == today.year && e.date.month == today.month && e.date.day == today.day && h.isPositiveDay(e),
+            e.date.year == today.year && e.date.month == today.month && e.date.day == today.day &&             e.count > 0,
       );
       return todayEntries.isNotEmpty;
     }).length;

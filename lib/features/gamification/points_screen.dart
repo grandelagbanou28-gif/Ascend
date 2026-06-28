@@ -96,8 +96,11 @@ class _PointsScreenState extends State<PointsScreen> with TickerProviderStateMix
       if (habit.currentStreak >= 100) _totalPoints += 500;
       
       // Points for success rate
-      if (habit.successRate >= 80) _totalPoints += 100;
-      if (habit.successRate >= 95) _totalPoints += 200;
+      final successRate = habit.entries.isEmpty
+          ? 0.0
+          : (habit.totalCompletions / habit.entries.length * 100);
+      if (successRate >= 80) _totalPoints += 100;
+      if (successRate >= 95) _totalPoints += 200;
     }
     
     // Calculate level
@@ -137,7 +140,10 @@ class _PointsScreenState extends State<PointsScreen> with TickerProviderStateMix
         description: 'Achieve 95% success rate',
         icon: Icons.star,
         points: 200,
-        isUnlocked: _habits.any((h) => h.successRate >= 95),
+        isUnlocked: _habits.any((h) {
+          if (h.entries.isEmpty) return false;
+          return (h.totalCompletions / h.entries.length * 100) >= 95;
+        }),
         category: 'Performance',
       ),
       Achievement(

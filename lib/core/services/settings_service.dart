@@ -1,16 +1,12 @@
-// lib/main.dart
-
 import 'package:ascend/core/enums/app_enums.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsService {
-  // Keys for all settings
   static const String THEME_KEY = 'theme_mode';
   static const String SELECTED_THEME_KEY = 'selected_theme';
   static const String DEFAULT_HABIT_TYPE_KEY = 'default_habit_type';
-  static const String DEFAULT_DISPLAY_MODE_KEY = 'default_display_mode';
   static const String DEFAULT_FREQUENCY_KEY = 'default_frequency';
-  static const String DEFAULT_UNIT_KEY = 'default_unit';
+  static const String DEFAULT_CATEGORY_KEY = 'default_category';
   static const String NOTIFICATIONS_ENABLED_KEY = 'notifications_enabled';
   static const String SOUND_ENABLED_KEY = 'sound_enabled';
   static const String VIBRATION_ENABLED_KEY = 'vibration_enabled';
@@ -35,7 +31,6 @@ class SettingsService {
   static const String LANGUAGE_KEY = 'language';
   static const String HAPTIC_FEEDBACK_KEY = 'haptic_feedback';
   
-  // Theme settings
   static Future<bool> setDarkMode(bool isDarkMode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('dark_mode', isDarkMode);
@@ -57,7 +52,6 @@ class SettingsService {
     return prefs.getString(SELECTED_THEME_KEY) ?? 'Default';
   }
   
-  // Habit settings
   static Future<bool> setDefaultHabitType(HabitType type) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.setInt(DEFAULT_HABIT_TYPE_KEY, type.index);
@@ -65,19 +59,8 @@ class SettingsService {
   
   static Future<HabitType> getDefaultHabitType() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    int index = prefs.getInt(DEFAULT_HABIT_TYPE_KEY) ?? HabitType.SuccessBased.index;
+    int index = prefs.getInt(DEFAULT_HABIT_TYPE_KEY) ?? HabitType.Positive.index;
     return HabitType.values[index];
-  }
-  
-  static Future<bool> setDefaultDisplayMode(ReportDisplay mode) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.setInt(DEFAULT_DISPLAY_MODE_KEY, mode.index);
-  }
-  
-  static Future<ReportDisplay> getDefaultDisplayMode() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int index = prefs.getInt(DEFAULT_DISPLAY_MODE_KEY) ?? ReportDisplay.Rate.index;
-    return ReportDisplay.values[index];
   }
   
   static Future<void> setDefaultFrequency(HabitFrequency frequency) async {
@@ -91,18 +74,17 @@ class SettingsService {
     return HabitFrequency.values[index];
   }
   
-  static Future<void> setDefaultUnit(HabitUnit unit) async {
+  static Future<void> setDefaultCategory(HabitCategory category) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(DEFAULT_UNIT_KEY, unit.index);
+    await prefs.setInt(DEFAULT_CATEGORY_KEY, category.index);
   }
   
-  static Future<HabitUnit> getDefaultUnit() async {
+  static Future<HabitCategory> getDefaultCategory() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    int index = prefs.getInt(DEFAULT_UNIT_KEY) ?? HabitUnit.Count.index;
-    return HabitUnit.values[index];
+    int index = prefs.getInt(DEFAULT_CATEGORY_KEY) ?? HabitCategory.Health.index;
+    return HabitCategory.values[index];
   }
   
-  // Notification settings
   static Future<void> setNotificationsEnabled(bool enabled) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool(NOTIFICATIONS_ENABLED_KEY, enabled);
@@ -163,7 +145,6 @@ class SettingsService {
     return prefs.getInt(REMINDER_TIME_KEY) ?? 9;
   }
   
-  // Display settings
   static Future<void> setCompactMode(bool enabled) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool(COMPACT_MODE_KEY, enabled);
@@ -274,7 +255,6 @@ class SettingsService {
     return prefs.getBool(SHOW_CURRENT_STREAK_KEY) ?? true;
   }
   
-  // Data settings
   static Future<void> setAutoBackup(bool enabled) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool(AUTO_BACKUP_KEY, enabled);
@@ -315,7 +295,6 @@ class SettingsService {
     return prefs.getBool(DATA_VALIDATION_KEY) ?? true;
   }
   
-  // Advanced settings
   static Future<void> setLanguage(String language) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString(LANGUAGE_KEY, language);
@@ -336,7 +315,6 @@ class SettingsService {
     return prefs.getBool(HAPTIC_FEEDBACK_KEY) ?? true;
   }
   
-  // Reset all settings
   static Future<void> resetAllSettings() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.clear();

@@ -21,9 +21,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late HabitType _defaultHabitType;
-  late ReportDisplay _defaultDisplayMode;
   late HabitFrequency _defaultFrequency;
-  late HabitUnit _defaultUnit;
   bool _loading = true;
   bool _notificationsEnabled = true;
   bool _soundEnabled = true;
@@ -60,9 +58,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     
     // Load all settings from SettingsService
     _defaultHabitType = await SettingsService.getDefaultHabitType();
-    _defaultDisplayMode = await SettingsService.getDefaultDisplayMode();
     _defaultFrequency = await SettingsService.getDefaultFrequency();
-    _defaultUnit = await SettingsService.getDefaultUnit();
     
     _notificationsEnabled = await SettingsService.getNotificationsEnabled();
     _soundEnabled = await SettingsService.getSoundEnabled();
@@ -254,13 +250,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
           trailing: Icon(Icons.arrow_forward_ios, size: 16),
           onTap: _showFrequencySelector,
         ),
-        ListTile(
-          title: Text('Default Unit'),
-          subtitle: Text(formatPascalCase(_defaultUnit.toString().split('.').last)),
-          leading: Icon(Icons.straighten),
-          trailing: Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: _showUnitSelector,
-        ),
         SwitchListTile(
           title: Text('Show Habit Icons'),
           subtitle: Text('Display icons next to habit names'),
@@ -366,13 +355,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return _buildSettingsCard(
       title: '📊 Display',
       children: [
-        ListTile(
-          title: Text('Default Display Mode'),
-          subtitle: Text(formatPascalCase(_defaultDisplayMode.toString().split('.').last)),
-          leading: Icon(Icons.bar_chart),
-          trailing: Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: _showDisplayModeSelector,
-        ),
         ListTile(
           title: Text('Date Format'),
           subtitle: Text(_dateFormat),
@@ -657,58 +639,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (value != null) {
                   setState(() => _defaultFrequency = value);
                   SettingsService.setDefaultFrequency(value);
-                  Navigator.pop(context);
-                }
-              },
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-  
-  void _showUnitSelector() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Select Default Unit'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: HabitUnit.values.map((unit) {
-            return RadioListTile<HabitUnit>(
-              title: Text(formatPascalCase(unit.toString().split('.').last)),
-              value: unit,
-              groupValue: _defaultUnit,
-              onChanged: (HabitUnit? value) {
-                if (value != null) {
-                  setState(() => _defaultUnit = value);
-                  SettingsService.setDefaultUnit(value);
-                  Navigator.pop(context);
-                }
-              },
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-  
-  void _showDisplayModeSelector() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Select Default Display Mode'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ReportDisplay.values.map((mode) {
-            return RadioListTile<ReportDisplay>(
-              title: Text(formatPascalCase(mode.toString().split('.').last)),
-              value: mode,
-              groupValue: _defaultDisplayMode,
-              onChanged: (ReportDisplay? value) {
-                if (value != null) {
-                  setState(() => _defaultDisplayMode = value);
-                  SettingsService.setDefaultDisplayMode(value);
                   Navigator.pop(context);
                 }
               },

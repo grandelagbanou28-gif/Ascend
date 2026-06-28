@@ -52,12 +52,6 @@ class AchievementsSystem {
         globalUnlockedAchievements.add(achievement.id);
         await prefs.setStringList('global_achievements', globalUnlockedAchievements);
         
-        // Also add to habit's unlocked achievements for backward compatibility
-        habit.unlockedAchievements.add(achievement.id);
-        
-        // Award points to habit
-        final levelUpMessages = habit.addPoints(achievement.points);
-        
         // Show notification
         await NotificationService.showAchievementNotification(
           title: achievement.isBadAchievement 
@@ -65,16 +59,6 @@ class AchievementsSystem {
               : 'Achievement Unlocked! 🏆',
           body: '${achievement.name}: ${achievement.description}',
         );
-        
-        // Handle level ups
-        for (final message in levelUpMessages) {
-          if (message.contains('Level')) {
-            final level = int.tryParse(message.replaceAll(RegExp(r'[^0-9]'), ''));
-            if (level != null) {
-              await NotificationService.showLevelUpNotification(habit, level);
-            }
-          }
-        }
       }
     }
     
@@ -134,7 +118,7 @@ class AchievementsSystem {
         progress[achievement.id] = (habit.entries.length / target).clamp(0.0, 1.0);
       } else if (achievement.id.contains('points')) {
         final target = _extractNumberFromId(achievement.id, 'points');
-        progress[achievement.id] = (habit.totalPoints / target).clamp(0.0, 1.0);
+        progress[achievement.id] = (habit.totalCompletions / target).clamp(0.0, 1.0);
       } else {
         // For complex achievements, just check if condition is met
         progress[achievement.id] = achievement.checkCondition(habit) ? 1.0 : 0.0;

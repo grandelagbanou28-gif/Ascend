@@ -328,7 +328,7 @@ bool _checkSerialQuitting(Habit habit) {
 bool _checkMidnightFailures(Habit habit) {
   int nightFailures = 0;
   for (final entry in habit.entries) {
-    if (entry.date.hour >= 22 && !habit.isPositiveDay(entry)) {
+    if (entry.date.hour >= 22 && entry.count <= 0) {
       nightFailures++;
     }
   }
@@ -343,7 +343,7 @@ bool _checkWeekendFailures(Habit habit) {
     if (entry.date.weekday == DateTime.saturday || 
         entry.date.weekday == DateTime.sunday) {
       weekendTotal++;
-      if (!habit.isPositiveDay(entry)) {
+      if (entry.count <= 0) {
         weekendFailures++;
       }
     }
@@ -392,7 +392,7 @@ bool _checkHabitHoarding(Habit habit) {
 bool _checkMondayFailures(Habit habit) {
   int mondayFailures = 0;
   for (final entry in habit.entries) {
-    if (entry.date.weekday == DateTime.monday && !habit.isPositiveDay(entry)) {
+    if (entry.date.weekday == DateTime.monday && entry.count <= 0) {
       mondayFailures++;
     }
   }

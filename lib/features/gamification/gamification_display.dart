@@ -24,34 +24,7 @@ class GamificationDisplay extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Level badge
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: _getLevelColor().withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: _getLevelColor(), width: 1),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.trending_up, size: 12, color: _getLevelColor()),
-              SizedBox(width: 2),
-              Text(
-                'Lv.${habit.level}',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                  color: _getLevelColor(),
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        SizedBox(width: 6),
-        
-        // Points
+        // Completions
         Container(
           padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
@@ -65,7 +38,7 @@ class GamificationDisplay extends StatelessWidget {
               Icon(Icons.star, size: 12, color: Colors.amber),
               SizedBox(width: 2),
               Text(
-                '${habit.totalPoints}',
+                '${habit.totalCompletions}',
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
@@ -80,23 +53,23 @@ class GamificationDisplay extends StatelessWidget {
   }
   
   Widget _buildFullDisplay(BuildContext context) {
-    final progress = _getExperienceProgress();
-    final nextLevelXP = _getNextLevelXP();
-    final currentLevelXP = _getCurrentLevelXP();
+    final successRate = habit.entries.isEmpty
+        ? 0.0
+        : (habit.totalCompletions / habit.entries.length * 100);
     
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            _getLevelColor().withValues(alpha: 0.1),
-            _getLevelColor().withValues(alpha: 0.05),
+            Colors.amber.withValues(alpha: 0.1),
+            Colors.amber.withValues(alpha: 0.05),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _getLevelColor().withValues(alpha: 0.3)),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -107,12 +80,12 @@ class GamificationDisplay extends StatelessWidget {
               Container(
                 padding: EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _getLevelColor().withValues(alpha: 0.2),
+                  color: Colors.amber.withValues(alpha: 0.2),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.emoji_events,
-                  color: _getLevelColor(),
+                  color: Colors.amber,
                   size: 20,
                 ),
               ),
@@ -122,41 +95,11 @@ class GamificationDisplay extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Level ${habit.level} ${_getLevelTitle()}',
+                      '${habit.totalCompletions} Total Completions',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: _getLevelColor(),
-                      ),
-                    ),
-                    Text(
-                      '${habit.totalPoints} Total Points',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.amber),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.star, size: 16, color: Colors.amber),
-                    SizedBox(width: 4),
-                    Text(
-                      '${habit.experiencePoints} XP',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.amber[700],
+                        color: Colors.amber,
                       ),
                     ),
                   ],
@@ -166,44 +109,6 @@ class GamificationDisplay extends StatelessWidget {
           ),
           
           SizedBox(height: 16),
-          
-          // Progress to next level
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Progress to Level ${habit.level + 1}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  Text(
-                    '${habit.experiencePoints - currentLevelXP}/${nextLevelXP - currentLevelXP} XP',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: progress,
-                  minHeight: 8,
-                  backgroundColor: Colors.grey.withValues(alpha: 0.2),
-                  valueColor: AlwaysStoppedAnimation<Color>(_getLevelColor()),
-                ),
-              ),
-            ],
-          ),
-          
-          SizedBox(height: 12),
           
           // Stats row
           Row(
@@ -220,7 +125,7 @@ class GamificationDisplay extends StatelessWidget {
               Expanded(
                 child: _buildStatBox(
                   'Success',
-                  '${habit.successRate.toStringAsFixed(0)}%',
+                  '${successRate.toStringAsFixed(0)}%',
                   Icons.check_circle,
                   Colors.green,
                 ),
@@ -272,39 +177,6 @@ class GamificationDisplay extends StatelessWidget {
       ),
     );
   }
-  
-  Color _getLevelColor() {
-    if (habit.level >= 50) return Color(0xFFFFD700); // Gold color
-    if (habit.level >= 30) return Colors.purple;
-    if (habit.level >= 20) return Colors.blue;
-    if (habit.level >= 10) return Colors.green;
-    return Colors.grey;
-  }
-  
-  String _getLevelTitle() {
-    if (habit.level >= 50) return 'Master';
-    if (habit.level >= 30) return 'Expert';
-    if (habit.level >= 20) return 'Advanced';
-    if (habit.level >= 10) return 'Intermediate';
-    return 'Beginner';
-  }
-  
-  double _getExperienceProgress() {
-    final currentLevelXP = _getCurrentLevelXP();
-    final nextLevelXP = _getNextLevelXP();
-    final currentXP = habit.experiencePoints - currentLevelXP;
-    final xpForNextLevel = nextLevelXP - currentLevelXP;
-    
-    return xpForNextLevel > 0 ? currentXP / xpForNextLevel : 0.0;
-  }
-  
-  int _getCurrentLevelXP() {
-    return ((habit.level - 1) * 1000);
-  }
-  
-  int _getNextLevelXP() {
-    return (habit.level * 1000);
-  }
 }
 
 // Extension to add gamification display to HabitListItem
@@ -313,11 +185,11 @@ extension GamificationExtension on Widget {
     return Column(
       children: [
         this,
-        if (habit.totalPoints > 0 || habit.level > 1) ...[
+        if (habit.totalCompletions > 0) ...[
           SizedBox(height: 8),
           GamificationDisplay(habit: habit, isCompact: compact),
         ],
       ],
     );
   }
-} 
+}

@@ -54,22 +54,26 @@ class _AddEntryDialogState extends State<AddEntryDialog> with TickerProviderStat
   String get _getMainTitle {
     if (_isSkipped) return 'Skipping Day ${widget.dayNumber}';
 
-    if (widget.habit.unit != HabitUnit.Count && widget.habit.targetValue != null) {
+    if (widget.habit.type != HabitType.Counting && widget.habit.targetValue != null) {
       switch (widget.habit.type) {
-        case HabitType.FailBased:
+        case HabitType.Negative:
           return 'Track Failure';
-        case HabitType.SuccessBased:
+        case HabitType.Positive:
           return 'Track Progress';
-        case HabitType.DoneBased:
+        case HabitType.Counting:
+        case HabitType.Measurable:
+        case HabitType.Timed:
           return 'Mark as Done';
       }
     } else {
       switch (widget.habit.type) {
-        case HabitType.FailBased:
+        case HabitType.Negative:
           return 'Track Failure';
-        case HabitType.SuccessBased:
+        case HabitType.Positive:
           return 'Track Success';
-        case HabitType.DoneBased:
+        case HabitType.Counting:
+        case HabitType.Measurable:
+        case HabitType.Timed:
           return 'Mark Completion';
       }
     }
@@ -205,7 +209,7 @@ class _AddEntryDialogState extends State<AddEntryDialog> with TickerProviderStat
   }
 
   Widget _buildMainContent() {
-    if (widget.habit.type == HabitType.DoneBased && widget.habit.unit == HabitUnit.Count) {
+    if (widget.habit.type == HabitType.Counting) {
       return _buildDoneTypeInput();
     } else {
       return _buildValueInput();
@@ -269,7 +273,7 @@ class _AddEntryDialogState extends State<AddEntryDialog> with TickerProviderStat
 
   Widget _buildValueInput() {
     final hasTargetValue = widget.habit.targetValue != null;
-    final unitName = widget.habit.getUnitDisplayName();
+    final unitName = widget.habit.targetUnit ?? '';
 
     return Container(
       padding: EdgeInsets.all(0),
@@ -314,7 +318,7 @@ class _AddEntryDialogState extends State<AddEntryDialog> with TickerProviderStat
             SizedBox(height: 20),
           ],
 
-          if (widget.habit.unit == HabitUnit.Count) ...[
+          if (widget.habit.type == HabitType.Counting) ...[
             // Text('Enter Count', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             // SizedBox(height: 12),
 
@@ -513,12 +517,12 @@ class _AddEntryDialogState extends State<AddEntryDialog> with TickerProviderStat
 
   Widget _buildTargetProgressIndicator() {
     final targetValue = widget.habit.targetValue!;
-    final currentValue = widget.habit.unit == HabitUnit.Count
+    final currentValue = widget.habit.type == HabitType.Counting
         ? (int.tryParse(_countController.text) ?? 0).toDouble()
         : (double.tryParse(_valueController.text) ?? 0.0);
 
     final progress = (currentValue / targetValue).clamp(0.0, 1.0);
-    final isOnTrack = widget.habit.type == HabitType.FailBased ? currentValue <= targetValue : currentValue >= targetValue;
+    final isOnTrack = widget.habit.type == HabitType.Negative ? currentValue <= targetValue : currentValue >= targetValue;
 
     return Container(
       padding: EdgeInsets.all(20),
@@ -572,7 +576,7 @@ class _AddEntryDialogState extends State<AddEntryDialog> with TickerProviderStat
           ),
           SizedBox(height: 8),
           Text(
-            '${currentValue.toStringAsFixed(1)} / ${targetValue.toStringAsFixed(1)} ${widget.habit.getUnitDisplayName()}',
+            '${currentValue.toStringAsFixed(1)} / ${targetValue.toStringAsFixed(1)} ${widget.habit.targetUnit ?? ''}',
             style: TextStyle(fontSize: 12, color: Colors.grey[600]),
           ),
         ],
@@ -602,7 +606,7 @@ class _AddEntryDialogState extends State<AddEntryDialog> with TickerProviderStat
           TextFormField(
             controller: _notesController,
             decoration: InputDecoration(
-              hintText: widget.habit.type == HabitType.FailBased ? 'What triggered this? Any insights...' : 'How did it go? Any thoughts...',
+              hintText: widget.habit.type == HabitType.Negative ? 'What triggered this? Any insights...' : 'How did it go? Any thoughts...',
               filled: true,
               fillColor: Theme.of(context).cardColor,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -702,19 +706,21 @@ class _AddEntryDialogState extends State<AddEntryDialog> with TickerProviderStat
 
   String _getProgressText(bool isOnTrack, double current, double target) {
     switch (widget.habit.type) {
-      case HabitType.FailBased:
+      case HabitType.Negative:
         if (current <= target) {
           return 'Within limit ✓';
         } else {
           return 'Over limit by ${(current - target).toStringAsFixed(1)}';
         }
-      case HabitType.SuccessBased:
+      case HabitType.Positive:
         if (current >= target) {
           return 'Target reached! ✓';
         } else {
           return 'Need ${(target - current).toStringAsFixed(1)} more';
         }
-      case HabitType.DoneBased:
+      case HabitType.Counting:
+      case HabitType.Measurable:
+      case HabitType.Timed:
         if (current >= target) {
           return 'Goal achieved! ✓';
         } else {
@@ -774,9 +780,9 @@ class _AddEntryDialogState extends State<AddEntryDialog> with TickerProviderStat
     int count = 0;
     double? value;
 
-    if (widget.habit.type == HabitType.DoneBased && widget.habit.unit == HabitUnit.Count) {
+    if (widget.habit.type == HabitType.Counting) {
       count = _isDone ? 1 : 0;
-    } else if (widget.habit.unit == HabitUnit.Count) {
+    } else if (widget.habit.type == HabitType.Counting) {
       count = int.tryParse(_countController.text) ?? _sliderValue;
     } else {
       value = double.tryParse(_valueController.text);
@@ -790,7 +796,7 @@ class _AddEntryDialogState extends State<AddEntryDialog> with TickerProviderStat
       count: count,
       dayNumber: widget.dayNumber,
       value: value,
-      unit: widget.habit.unit != HabitUnit.Count ? widget.habit.getUnitDisplayName() : null,
+      unit: widget.habit.type != HabitType.Counting ? (widget.habit.targetUnit ?? '') : null,
       notes: _notesController.text.trim().isNotEmpty ? _notesController.text.trim() : null,
       isSkipped: false,
     );

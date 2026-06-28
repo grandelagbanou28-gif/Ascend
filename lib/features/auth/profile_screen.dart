@@ -520,7 +520,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             if (!(user?.emailConfirmedAt != null))
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: Icon(Icons.mark_email_outlined),
+                leading: Icon(Icons.mark_email_unread),
                 title: Text('Vérifier l\'email'),
                 trailing: Icon(Icons.chevron_right),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),

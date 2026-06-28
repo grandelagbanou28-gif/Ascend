@@ -105,9 +105,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         timezone: _selectedTimezone,
         favoriteQuote: _quoteController.text.trim().isEmpty ? null : _quoteController.text.trim(),
         theme: _selectedTheme,
-        primaryColor: _selectedPrimaryColor != null
-            ? '#${_selectedPrimaryColor!.value.toRadixString(16).substring(2)}'
-            : null,
+        primaryColor: _selectedPrimaryColor,
       );
 
       if (mounted) {

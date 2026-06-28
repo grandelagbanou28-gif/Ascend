@@ -1,5 +1,3 @@
-// lib/main.dart
-
 import 'package:flutter/material.dart';
 import 'package:ascend/core/enums/app_enums.dart';
 import 'package:ascend/data/models/habit.dart';
@@ -24,7 +22,7 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this); // Increased to 5 tabs
+    _tabController = TabController(length: 5, vsync: this);
   }
   
   @override
@@ -37,8 +35,14 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
     setState(() {});
   }
   
+  int _getNextDayNumber() {
+    final entries = widget.habit.entries;
+    if (entries.isEmpty) return 1;
+    return entries.map((e) => e.dayNumber).reduce((a, b) => a > b ? a : b) + 1;
+  }
+  
   void _showAddEntryDialog() {
-    final nextDay = widget.habit.getNextDayNumber();
+    final nextDay = _getNextDayNumber();
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -52,39 +56,6 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
             _refreshHabit();
           },
         ),
-      ),
-    );
-  }
-  
-  void _showToggleDisplayModeDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Change Display Mode'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ReportDisplay.values.map((mode) {
-            return RadioListTile<ReportDisplay>(
-              title: Text(mode.toString().split('.').last),
-              value: mode,
-              groupValue: widget.habit.displayMode,
-              onChanged: (value) async {
-                if (value != null) {
-                  widget.habit.displayMode = value;
-                  await StorageService.save(widget.habit);
-                  Navigator.pop(context);
-                  _refreshHabit();
-                }
-              },
-            );
-          }).toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-        ],
       ),
     );
   }
@@ -168,7 +139,6 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
               subtitle: Text('Temporarily stop tracking without affecting streaks'),
               onTap: () async {
                 widget.habit.isPaused = true;
-                widget.habit.pauseStartDate = DateTime.now();
                 await StorageService.save(widget.habit);
                 Navigator.pop(context);
                 _refreshHabit();
@@ -180,7 +150,6 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
               subtitle: Text('Continue tracking this habit'),
               onTap: () async {
                 widget.habit.isPaused = false;
-                widget.habit.pauseEndDate = DateTime.now();
                 await StorageService.save(widget.habit);
                 Navigator.pop(context);
                 _refreshHabit();
@@ -193,8 +162,8 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
               onTap: () async {
                 widget.habit.isArchived = true;
                 await StorageService.save(widget.habit);
-                Navigator.pop(context); // Close dialog
-                Navigator.pop(context); // Go back to home
+                Navigator.pop(context);
+                Navigator.pop(context);
               },
             ),
             if (widget.habit.isArchived) ListTile(
@@ -204,8 +173,8 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
               onTap: () async {
                 widget.habit.isArchived = false;
                 await StorageService.save(widget.habit);
-                Navigator.pop(context); // Close dialog
-                Navigator.pop(context); // Go back to home
+                Navigator.pop(context);
+                Navigator.pop(context);
               },
             ),
             Divider(),
@@ -244,9 +213,9 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () async {
               await StorageService.delete(widget.habit);
-              Navigator.pop(context); // Close confirmation dialog
-              Navigator.pop(context); // Close manage dialog
-              Navigator.pop(context); // Go back to home
+              Navigator.pop(context);
+              Navigator.pop(context);
+              Navigator.pop(context);
             },
             child: Text('Delete'),
           ),
@@ -311,27 +280,12 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
           _buildHabitInfoCard(),
           SizedBox(height: 16),
           _buildStatsGrid(),
-          SizedBox(height: 16),
-          if (widget.habit.type == HabitType.FailBased) _buildTimeSinceLastFailure(),
-          SizedBox(height: 16),
-          _buildAchievementsSection(),
         ],
       ),
     );
   }
 
-  // Calendar tab is commented out as requested
   Widget _buildCalendarTab() {
-    // Commented out as requested
-    // Original implementation:
-    // return Padding(
-    //   padding: EdgeInsets.all(16),
-    //   child: CalendarView(
-    //     habit: widget.habit,
-    //     onRefresh: _refreshHabit,
-    //   ),
-    // );
-    
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -348,7 +302,6 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
   }
 
   Widget _buildAnalyticsTab() {
-    // Integrated analytics directly instead of using AnalyticsDashboard widget
     return SingleChildScrollView(
       padding: EdgeInsets.all(16),
       child: Column(
@@ -370,18 +323,15 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
       return _buildEmptyChartCard('Success Rate', 'Add entries to see your success rate chart');
     }
     
-    // Group entries by week
     final now = DateTime.now();
     final groupedEntries = <DateTime, List<HabitEntry>>{};
     
-    // Get entries from the last 8 weeks
     for (var i = 0; i < 8; i++) {
       final weekStart = now.subtract(Duration(days: 7 * i + now.weekday - 1));
       final key = DateTime(weekStart.year, weekStart.month, weekStart.day);
       groupedEntries[key] = [];
     }
     
-    // Fill with actual entries
     for (var entry in habit.entries) {
       final entryDate = entry.date;
       final weekStart = entryDate.subtract(Duration(days: entryDate.weekday - 1));
@@ -392,11 +342,10 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
       }
     }
     
-    // Calculate success rate for each week
     final chartData = <DateTime, double>{};
     groupedEntries.forEach((date, entries) {
       if (entries.isNotEmpty) {
-        final successCount = entries.where((e) => habit.isPositiveDay(e)).length;
+        final successCount = entries.where((e) => e.count > 0).length;
         final rate = (successCount / entries.length) * 100;
         chartData[date] = rate;
       } else {
@@ -404,7 +353,6 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
       }
     });
     
-    // Sort by date
     final sortedDates = chartData.keys.toList()..sort((a, b) => a.compareTo(b));
     
     return Card(
@@ -425,7 +373,6 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  // Y-axis labels
                   Column(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -438,14 +385,13 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
                     ],
                   ),
                   SizedBox(width: 8),
-                  // Chart
                   Expanded(
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: sortedDates.map((date) {
                         final value = chartData[date] ?? 0;
-                        final barHeight = value * 1.8; // 180 max height for 100%
+                        final barHeight = value * 1.8;
                         
                         return Tooltip(
                           message: '${DateFormat('MMM d').format(date)}: ${value.toStringAsFixed(1)}%',
@@ -495,10 +441,10 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
       return _buildEmptyChartCard('Streak Trends', 'Add entries to see your streak trends');
     }
     
-    // Get streak data
     final currentStreak = habit.currentStreak;
     final bestStreak = habit.bestStreak;
-    final avgStreak = habit.entries.length / (habit.negativeCount > 0 ? habit.negativeCount + 1 : 1);
+    final negativeCount = habit.entries.where((e) => e.count <= 0).length;
+    final avgStreak = habit.entries.length / (negativeCount > 0 ? negativeCount + 1 : 1);
     
     return Card(
       elevation: 2,
@@ -589,7 +535,6 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
       return _buildEmptyChartCard('Performance Insights', 'Add entries to see performance insights');
     }
     
-    // Generate insights based on habit data
     final insights = _generateInsights(habit);
     
     return Card(
@@ -649,9 +594,8 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
   List<Map<String, dynamic>> _generateInsights(Habit habit) {
     List<Map<String, dynamic>> insights = [];
     
-    // Success rate insight
     if (habit.entries.length >= 5) {
-      final successRate = habit.successRate;
+      final successRate = (habit.entries.where((e) => e.count > 0).length / habit.entries.length) * 100;
       String rateDescription;
       Color rateColor;
       
@@ -677,7 +621,6 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
       });
     }
     
-    // Streak insight
     if (habit.currentStreak > 0) {
       String streakDescription;
       Color streakColor;
@@ -701,7 +644,6 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
       });
     }
     
-    // Most active day
     if (habit.entries.length >= 7) {
       final dayCount = <int, int>{};
       for (var entry in habit.entries) {
@@ -810,7 +752,6 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
     
     return Column(
       children: [
-        // Current month report
         Card(
           child: ListTile(
             leading: CircleAvatar(
@@ -828,7 +769,6 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
         ),
         SizedBox(height: 8),
         
-        // Year in review
         Card(
           child: ListTile(
             leading: CircleAvatar(
@@ -846,7 +786,6 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
         ),
         SizedBox(height: 8),
         
-        // Weekly report
         Card(
           child: ListTile(
             leading: CircleAvatar(
@@ -968,11 +907,6 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
 
   Widget _buildHabitInfoCard() {
     final habit = widget.habit;
-    final entries = habit.entries;
-    
-    final days = entries.length;
-    final positiveDays = habit.positiveCount;
-    final negativeDays = days - positiveDays;
     
     return Card(
       elevation: 2,
@@ -993,16 +927,13 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
               ),
             ),
             SizedBox(height: 16),
-            _buildInfoRow('Type', _getHabitTypeText(habit.type)),
-            _buildInfoRow('Frequency', _getFrequencyText(habit)),
-            if (habit.category != null)
-              _buildInfoRow('Category', habit.category!),
+            _buildInfoRow('Type', habit.typeDisplayName),
+            _buildInfoRow('Frequency', habit.frequencyDisplayName),
+            _buildInfoRow('Category', habit.categoryDisplayName),
             if (habit.targetValue != null)
-              _buildInfoRow('Target', '${habit.targetValue} ${habit.getUnitDisplayName()}'),
+              _buildInfoRow('Target', '${habit.targetValue} ${habit.targetUnit ?? ''}'),
             if (habit.isPaused)
               _buildInfoRow('Status', 'Paused', color: Colors.orange),
-            if (habit.type == HabitType.FailBased && habit.hasEntries)
-              _buildInfoRow('Time Clean', habit.getTimeSinceLastFailure(), color: Colors.green),
           ],
         ),
       ),
@@ -1015,15 +946,13 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
     
     final days = entries.length;
     final totalCount = entries.fold(0, (sum, e) => sum + e.count);
-    final positiveDays = habit.positiveCount;
+    final positiveDays = entries.where((e) => e.count > 0).length;
     final negativeDays = days - positiveDays;
-    final posRate = days > 0 ? (positiveDays / days) * 100 : 0;
-    final negRate = days > 0 ? (negativeDays / days) * 100 : 0;
     
     final avgPerDay = days > 0 ? totalCount / days : 0;
     final avgPositive = positiveDays > 0
         ? entries
-            .where((e) => habit.isPositiveDay(e))
+            .where((e) => e.count > 0)
             .fold(0, (sum, e) => sum + e.count) / positiveDays
         : 0;
     
@@ -1039,13 +968,6 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
           _buildStatItem('Highest Count ($maxCount) on Day(s)', maxDays.join(', ')),
       ],
     );
-  }
-  
-  Widget _buildTimeSinceLastFailure() {
-    final habit = widget.habit;
-    final timeSinceLastFailure = habit.getTimeSinceLastFailure();
-    
-    return _buildInfoRow('Time Since Last Failure', timeSinceLastFailure, color: Colors.green);
   }
   
   Widget _buildStreakCard() {
@@ -1150,175 +1072,10 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
                 ),
               ],
             ),
-            SizedBox(height: 16),
-            if (habit.currentStreak > 0)
-              Container(
-                padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.local_fire_department, color: Colors.amber, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      habit.getMilestoneMessage(),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
           ],
         ),
       ),
     );
-  }
-  
-  Widget _buildAchievementsSection() {
-    final habit = widget.habit;
-    final achievements = habit.unlockedAchievements;
-    
-    if (achievements.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Achievements',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 16),
-              Center(
-                child: Column(
-                  children: [
-                    Icon(Icons.emoji_events_outlined, size: 48, color: Colors.grey),
-                    SizedBox(height: 8),
-                    Text(
-                      'No achievements yet',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      'Keep going to unlock achievements!',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-    
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Achievements',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  '${achievements.length} unlocked',
-                  style: TextStyle(
-                    color: Colors.grey,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 16),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: achievements.take(5).map((achievement) {
-                return Tooltip(
-                  message: _getAchievementName(achievement),
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: _getAchievementColor(achievement).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _getAchievementColor(achievement).withValues(alpha: 0.5),
-                        width: 2,
-                      ),
-                    ),
-                    child: Icon(
-                      _getAchievementIcon(achievement),
-                      color: _getAchievementColor(achievement),
-                      size: 24,
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  IconData _getAchievementIcon(String achievementId) {
-    // Simple mapping for common achievements
-    if (achievementId.contains('week')) return Icons.local_fire_department;
-    if (achievementId.contains('month')) return Icons.emoji_events;
-    if (achievementId.contains('year')) return Icons.celebration;
-    if (achievementId.contains('consistency')) return Icons.auto_graph;
-    if (achievementId.contains('perfect')) return Icons.star;
-    return Icons.emoji_events;
-  }
-  
-  Color _getAchievementColor(String achievementId) {
-    // Simple color mapping
-    if (achievementId.contains('week')) return Colors.orange;
-    if (achievementId.contains('month')) return Colors.blue;
-    if (achievementId.contains('year')) return Colors.amber;
-    if (achievementId.contains('consistency')) return Colors.green;
-    if (achievementId.contains('perfect')) return Colors.purple;
-    return Colors.teal;
-  }
-  
-  String _getAchievementName(String achievementId) {
-    // Map achievement IDs to display names
-    final nameMap = {
-      'first_week': 'Week Warrior',
-      'first_month': 'Month Master',
-      'centurion': 'Centurion',
-      'year_warrior': 'Year Warrior',
-      'consistency_king': 'Consistency King',
-      'perfectionist': 'Perfectionist',
-      'getting_started': 'Getting Started',
-      'half_century': 'Half Century',
-      'century_club': 'Century Club',
-      'dedication_master': 'Dedication Master',
-      'first_thousand': 'First Thousand',
-      'point_collector': 'Point Collector',
-      'point_master': 'Point Master',
-      'legend': 'Legend',
-    };
-    
-    return nameMap[achievementId] ?? achievementId;
   }
   
   Widget _buildInfoRow(String label, String value, {Color? color}) {
@@ -1374,45 +1131,14 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
       ],
     );
   }
-  
-  String _getHabitTypeText(HabitType type) {
-    switch (type) {
-      case HabitType.FailBased:
-        return 'Avoid (Failure-based)';
-      case HabitType.SuccessBased:
-        return 'Achieve (Success-based)';
-      case HabitType.DoneBased:
-        return 'Check (Done-based)';
-    }
-  }
-  
-  String _getFrequencyText(Habit habit) {
-    switch (habit.frequency) {
-      case HabitFrequency.Daily:
-        return 'Daily';
-      case HabitFrequency.Weekdays:
-        return 'Weekdays (Mon-Fri)';
-      case HabitFrequency.Weekends:
-        return 'Weekends (Sat-Sun)';
-      case HabitFrequency.CustomDays:
-        final dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        final selectedDays = habit.customDays.map((i) => dayNames[i]).join(', ');
-        return 'Custom Days ($selectedDays)';
-      case HabitFrequency.XTimesPerWeek:
-        return '${habit.targetFrequency ?? 'X'} times per week';
-      case HabitFrequency.XTimesPerMonth:
-        return '${habit.targetFrequency ?? 'X'} times per month';
-    }
-  }
 
   List<Widget> _buildEntriesList() {
     final entries = widget.habit.entries;
     
-    // Sort entries by day number in descending order
     final sortedEntries = [...entries]..sort((a, b) => b.dayNumber.compareTo(a.dayNumber));
     
     return sortedEntries.map((entry) {
-      final isPositive = widget.habit.isPositiveDay(entry);
+      final isPositive = entry.count > 0;
       
       return Card(
         margin: EdgeInsets.only(bottom: 8),
@@ -1490,35 +1216,53 @@ class _HabitDetailScreenState extends State<HabitDetailScreen> with SingleTicker
     
     String description;
     switch (widget.habit.type) {
-      case HabitType.FailBased:
+      case HabitType.Negative:
         if (entry.value != null) {
           description = entry.count == 0 
-              ? 'Success (0 ${widget.habit.getUnitDisplayName()})' 
-              : '${entry.value} ${entry.unit ?? widget.habit.getUnitDisplayName()}';
+              ? 'Success (0 ${widget.habit.targetUnit ?? ''})' 
+              : '${entry.value} ${entry.unit ?? widget.habit.targetUnit ?? ''}';
         } else {
           description = entry.count == 0 
               ? 'Success (0 failures)' 
               : '${entry.count} failure(s)';
         }
         break;
-      case HabitType.SuccessBased:
+      case HabitType.Positive:
         if (entry.value != null) {
           description = entry.count > 0 
-              ? '${entry.value} ${entry.unit ?? widget.habit.getUnitDisplayName()}' 
-              : 'Failed (0 ${widget.habit.getUnitDisplayName()})';
+              ? '${entry.value} ${entry.unit ?? widget.habit.targetUnit ?? ''}' 
+              : 'Failed (0 ${widget.habit.targetUnit ?? ''})';
         } else {
           description = entry.count > 0 
               ? '${entry.count} success(es)' 
               : 'Failed (0 successes)';
         }
         break;
-      case HabitType.DoneBased:
+      case HabitType.Counting:
         if (entry.value != null) {
           description = entry.count > 0 
-              ? 'Completed (${entry.value} ${entry.unit ?? widget.habit.getUnitDisplayName()})' 
+              ? 'Completed (${entry.value} ${entry.unit ?? widget.habit.targetUnit ?? ''})' 
               : 'Not completed';
         } else {
           description = entry.count > 0 ? 'Completed' : 'Not completed';
+        }
+        break;
+      case HabitType.Measurable:
+        if (entry.value != null) {
+          description = entry.count > 0 
+              ? '${entry.value} ${entry.unit ?? widget.habit.targetUnit ?? ''}' 
+              : 'No measurement recorded';
+        } else {
+          description = entry.count > 0 ? 'Recorded' : 'No data';
+        }
+        break;
+      case HabitType.Timed:
+        if (entry.value != null) {
+          description = entry.count > 0 
+              ? '${entry.value} ${entry.unit ?? widget.habit.targetUnit ?? 'minutes'}' 
+              : 'No time recorded';
+        } else {
+          description = entry.count > 0 ? 'Timed activity' : 'No data';
         }
         break;
     }

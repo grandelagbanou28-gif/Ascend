@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:ascend/core/enums/app_enums.dart';
 import 'package:ascend/data/models/habit.dart';
 import 'package:ascend/data/models/habit_entry.dart';
 import 'package:intl/intl.dart';
 
 class ReportsService {
+  static double _successRate(Habit habit) {
+    if (habit.entries.isEmpty) return 0.0;
+    return (habit.entries.where((e) => e.count > 0).length / habit.entries.length) * 100;
+  }
+
+  static int _positiveCount(Habit habit) {
+    return habit.entries.where((e) => e.count > 0).length;
+  }
+
   // Generate Year in Review report
   static YearInReviewData generateYearInReview(List<Habit> habits, int year) {
     final startDate = DateTime(year, 1, 1);
@@ -17,21 +27,17 @@ class ReportsService {
       return Habit(
         name: habit.name,
         type: habit.type,
-        displayMode: habit.displayMode,
         icon: habit.icon,
         color: habit.color,
         isArchived: habit.isArchived,
-        notes: habit.notes,
         reminderHour: habit.reminderHour,
         reminderMinute: habit.reminderMinute,
         hasReminder: habit.hasReminder,
         category: habit.category,
         frequency: habit.frequency,
         customDays: habit.customDays,
-        targetFrequency: habit.targetFrequency,
         targetValue: habit.targetValue,
-        unit: habit.unit,
-        customUnit: habit.customUnit,
+        targetUnit: habit.targetUnit,
         entries: yearEntries,
       );
     }).where((h) => h.entries.isNotEmpty).toList();
@@ -50,7 +56,7 @@ class ReportsService {
     
     // Find best habit
     final bestHabit = yearHabits.reduce((a, b) => 
-        a.successRate > b.successRate ? a : b);
+        _successRate(a) > _successRate(b) ? a : b);
     
     // Find longest streak
     var longestStreak = 0;
@@ -75,8 +81,7 @@ class ReportsService {
           .toList();
       
       final successfulEntries = monthEntries.where((e) {
-        final habit = yearHabits.firstWhere((h) => h.entries.contains(e));
-        return habit.isPositiveDay(e);
+        return e.count > 0;
       }).length;
       
       monthlyData[month] = MonthlyData(
@@ -90,7 +95,7 @@ class ReportsService {
     // Category breakdown
     final categoryStats = <String, CategoryStats>{};
     for (var habit in yearHabits) {
-      final category = habit.category ?? 'Uncategorized';
+      final category = habit.category.displayName;
       if (!categoryStats.containsKey(category)) {
         categoryStats[category] = CategoryStats(
           name: category,
@@ -102,7 +107,7 @@ class ReportsService {
       
       categoryStats[category]!.habits.add(habit);
       categoryStats[category]!.totalEntries += habit.entries.length;
-      categoryStats[category]!.successfulEntries += habit.positiveCount;
+      categoryStats[category]!.successfulEntries += _positiveCount(habit);
     }
     
     // Milestones achieved
@@ -119,7 +124,7 @@ class ReportsService {
       totalHabits: yearHabits.length,
       totalEntries: totalEntries,
       totalDaysTracked: totalDaysTracked,
-      overallSuccessRate: yearHabits.fold(0.0, (sum, h) => sum + h.successRate) / yearHabits.length,
+      overallSuccessRate: yearHabits.fold(0.0, (sum, h) => sum + _successRate(h)) / yearHabits.length,
       bestHabit: bestHabit,
       longestStreak: longestStreak,
       longestStreakHabit: longestStreakHabit,
@@ -144,21 +149,17 @@ class ReportsService {
       return Habit(
         name: habit.name,
         type: habit.type,
-        displayMode: habit.displayMode,
         icon: habit.icon,
         color: habit.color,
         isArchived: habit.isArchived,
-        notes: habit.notes,
         reminderHour: habit.reminderHour,
         reminderMinute: habit.reminderMinute,
         hasReminder: habit.hasReminder,
         category: habit.category,
         frequency: habit.frequency,
         customDays: habit.customDays,
-        targetFrequency: habit.targetFrequency,
         targetValue: habit.targetValue,
-        unit: habit.unit,
-        customUnit: habit.customUnit,
+        targetUnit: habit.targetUnit,
         entries: monthEntries,
       );
     }).toList();
@@ -182,8 +183,7 @@ class ReportsService {
           .toList();
       
       final successfulEntries = weekEntries.where((e) {
-        final habit = monthHabits.firstWhere((h) => h.entries.contains(e));
-        return habit.isPositiveDay(e);
+        return e.count > 0;
       }).length;
       
       weeklyData[week] = WeeklyData(
@@ -198,7 +198,7 @@ class ReportsService {
     
     // Top performing habits
     final activeHabits = monthHabits.where((h) => h.entries.isNotEmpty).toList();
-    activeHabits.sort((a, b) => b.successRate.compareTo(a.successRate));
+    activeHabits.sort((a, b) => _successRate(b).compareTo(_successRate(a)));
     
     // Identify trends
     final trends = _identifyMonthlyTrends(monthHabits);
@@ -210,7 +210,7 @@ class ReportsService {
       totalHabits: activeHabits.length,
       totalEntries: activeHabits.fold(0, (sum, h) => sum + h.entries.length),
       averageSuccessRate: activeHabits.isEmpty ? 0.0 : 
-          activeHabits.fold(0.0, (sum, h) => sum + h.successRate) / activeHabits.length,
+          activeHabits.fold(0.0, (sum, h) => sum + _successRate(h)) / activeHabits.length,
       topPerformers: activeHabits.take(3).toList(),
       weeklyData: weeklyData,
       trends: trends,
@@ -229,21 +229,17 @@ class ReportsService {
       return Habit(
         name: habit.name,
         type: habit.type,
-        displayMode: habit.displayMode,
         icon: habit.icon,
         color: habit.color,
         isArchived: habit.isArchived,
-        notes: habit.notes,
         reminderHour: habit.reminderHour,
         reminderMinute: habit.reminderMinute,
         hasReminder: habit.hasReminder,
         category: habit.category,
         frequency: habit.frequency,
         customDays: habit.customDays,
-        targetFrequency: habit.targetFrequency,
         targetValue: habit.targetValue,
-        unit: habit.unit,
-        customUnit: habit.customUnit,
+        targetUnit: habit.targetUnit,
         entries: weekEntries,
       );
     }).toList();
@@ -261,8 +257,7 @@ class ReportsService {
           .toList();
       
       final successfulEntries = dayEntries.where((e) {
-        final habit = weekHabits.firstWhere((h) => h.entries.contains(e));
-        return habit.isPositiveDay(e);
+        return e.count > 0;
       }).length;
       
       dailyData[date] = DailyData(
@@ -365,10 +360,10 @@ class ReportsService {
     
     for (var habit in habits) {
       // Low success rate challenge
-      if (habit.successRate < 50 && habit.entries.length >= 10) {
+      if (_successRate(habit) < 50 && habit.entries.length >= 10) {
         challenges.add(ChallengeData(
           title: 'Struggled with ${habit.formattedName}',
-          description: 'Only ${habit.successRate.toStringAsFixed(1)}% success rate',
+          description: 'Only ${_successRate(habit).toStringAsFixed(1)}% success rate',
           severity: ChallengeSeverity.High,
           habit: habit,
         ));
@@ -423,8 +418,8 @@ class ReportsService {
     final firstHalf = sortedEntries.take(sortedEntries.length ~/ 2).toList();
     final secondHalf = sortedEntries.skip(sortedEntries.length ~/ 2).toList();
     
-    final firstHalfSuccessRate = firstHalf.where((e) => habit.isPositiveDay(e)).length / firstHalf.length;
-    final secondHalfSuccessRate = secondHalf.where((e) => habit.isPositiveDay(e)).length / secondHalf.length;
+    final firstHalfSuccessRate = firstHalf.where((e) => e.count > 0).length / firstHalf.length;
+    final secondHalfSuccessRate = secondHalf.where((e) => e.count > 0).length / secondHalf.length;
     
     return secondHalfSuccessRate < firstHalfSuccessRate - 0.2; // 20% decline
   }
@@ -444,7 +439,7 @@ class ReportsService {
     }
     
     // Category insights
-    final categories = habits.where((h) => h.category != null).map((h) => h.category!).toSet();
+    final categories = habits.map((h) => h.category).toSet();
     if (categories.length > 1) {
       insights.add(InsightData(
         title: 'Well-Rounded',
@@ -455,7 +450,7 @@ class ReportsService {
     }
     
     // Consistency insights
-    final consistentHabits = habits.where((h) => h.successRate > 80).length;
+    final consistentHabits = habits.where((h) => _successRate(h) > 80).length;
     if (consistentHabits > 0) {
       insights.add(InsightData(
         title: 'Consistency Master',
@@ -499,8 +494,8 @@ class ReportsService {
   static bool _isImproving(Habit habit) {
     if (habit.entries.length < 6) return false;
     
-    final recent = habit.entries.take(habit.entries.length ~/ 2).where((e) => habit.isPositiveDay(e)).length;
-    final older = habit.entries.skip(habit.entries.length ~/ 2).where((e) => habit.isPositiveDay(e)).length;
+    final recent = habit.entries.take(habit.entries.length ~/ 2).where((e) => e.count > 0).length;
+    final older = habit.entries.skip(habit.entries.length ~/ 2).where((e) => e.count > 0).length;
     
     return recent > older;
   }
@@ -508,8 +503,8 @@ class ReportsService {
   static bool _isDecline(Habit habit) {
     if (habit.entries.length < 6) return false;
     
-    final recent = habit.entries.take(habit.entries.length ~/ 2).where((e) => habit.isPositiveDay(e)).length;
-    final older = habit.entries.skip(habit.entries.length ~/ 2).where((e) => habit.isPositiveDay(e)).length;
+    final recent = habit.entries.take(habit.entries.length ~/ 2).where((e) => e.count > 0).length;
+    final older = habit.entries.skip(habit.entries.length ~/ 2).where((e) => e.count > 0).length;
     
     return recent < older * 0.8; // 20% decline
   }
