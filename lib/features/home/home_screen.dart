@@ -30,6 +30,7 @@ import 'package:ascend/core/widgets/keyboard_shortcuts_dialog.dart';
 import 'package:ascend/features/auth/profile_screen.dart';
 import 'package:ascend/features/goals/goal_list_screen.dart';
 import 'package:ascend/features/challenges/challenge_list_screen.dart';
+import 'package:ascend/features/focus/focus_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback toggleTheme;
@@ -440,6 +441,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  void _openFocus() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FocusScreen(),
+      ),
+    );
+  }
+
   void _showKeyboardShortcuts() {
     showKeyboardShortcutsDialog(context);
   }
@@ -530,6 +540,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   case 'challenges':
                     _openChallenges();
                     break;
+                  case 'focus':
+                    _openFocus();
+                    break;
                   case 'points':
                     _openPointsScreen();
                     break;
@@ -576,6 +589,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       Icon(Icons.emoji_events, size: 18),
                       SizedBox(width: 8),
                       Text('Défis'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'focus',
+                  child: Row(
+                    children: [
+                      Icon(Icons.timer, size: 18),
+                      SizedBox(width: 8),
+                      Text('Focus'),
                     ],
                   ),
                 ),
