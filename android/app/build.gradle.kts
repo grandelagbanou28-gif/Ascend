@@ -7,7 +7,7 @@ plugins {
 android {
     namespace = "com.wisamidris.ascend"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "27.0.12077973" // Changed this line
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -38,7 +38,16 @@ flutter {
     source = "../.."
 }
 
-// Added this whole block
+configurations.all {
+    resolutionStrategy {
+        force("androidx.glance:glance-appwidget:1.1.1")
+        force("androidx.compose.remote:remote-creation-android:0.0.1-alpha07")
+        force("androidx.browser:browser:1.8.0")
+        force("androidx.core:core-ktx:1.15.0")
+        force("androidx.core:core:1.15.0")
+    }
+}
+
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

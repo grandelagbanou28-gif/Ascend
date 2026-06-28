@@ -869,7 +869,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
   
   void _showCurrencySelector() {
-    final currencies = ['FCFA', '€', '$', '£', '¥'];
+    final currencies = ['FCFA', '€', '\$', '£', '¥'];
     
     showDialog(
       context: context,
