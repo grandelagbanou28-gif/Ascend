@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:ascend/core/services/auth_service.dart';
 import 'package:ascend/features/auth/widgets/auth_button.dart';
 import 'package:ascend/features/auth/register_screen.dart';
@@ -258,26 +259,26 @@ class _LoginScreenState extends State<LoginScreen> {
                 SizedBox(height: 16),
                 AuthButton(
                   label: 'Se connecter',
-                  icon: Icons.login,
+                  icon: Icon(Icons.login, size: 22),
                   isLoading: _isLoading,
                   onPressed: _signIn,
                 ),
                 SizedBox(height: 16),
                 AuthButton(
                   label: 'Continuer avec Google',
-                  icon: Icons.g_mobiledata,
+                  icon: FaIcon(FontAwesomeIcons.google, size: 20),
                   onPressed: _signInWithGoogle,
                 ),
                 SizedBox(height: 12),
                 AuthButton(
                   label: 'Continuer avec Apple',
-                  icon: Icons.apple,
+                  icon: FaIcon(FontAwesomeIcons.apple, size: 22),
                   onPressed: _signInWithApple,
                 ),
                 SizedBox(height: 12),
                 AuthButton(
                   label: 'Continuer en tant qu\'invité',
-                  icon: Icons.person_outline,
+                  icon: Icon(Icons.person_outline, size: 22),
                   onPressed: _signInAnonymously,
                 ),
                 SizedBox(height: 24),

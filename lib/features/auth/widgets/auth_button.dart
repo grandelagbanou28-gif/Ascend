@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AuthButton extends StatelessWidget {
   final String label;
-  final IconData icon;
+  final Widget icon;
   final VoidCallback onPressed;
   final Color? backgroundColor;
   final Color? foregroundColor;
@@ -50,7 +50,7 @@ class AuthButton extends StatelessWidget {
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(icon, size: 22),
+                  icon,
                   SizedBox(width: 12),
                   Text(
                     label,

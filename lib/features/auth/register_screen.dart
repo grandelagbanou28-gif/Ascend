@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:ascend/core/services/auth_service.dart';
 import 'package:ascend/features/auth/widgets/auth_button.dart';
 import 'package:ascend/features/home/home_screen.dart';
@@ -266,20 +267,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 SizedBox(height: 24),
                 AuthButton(
                   label: 'S\'inscrire',
-                  icon: Icons.person_add,
+                  icon: Icon(Icons.person_add, size: 22),
                   isLoading: _isLoading,
                   onPressed: _signUp,
                 ),
                 SizedBox(height: 16),
                 AuthButton(
                   label: 'Continuer avec Google',
-                  icon: Icons.g_mobiledata,
+                  icon: FaIcon(FontAwesomeIcons.google, size: 20),
                   onPressed: _signUpWithGoogle,
                 ),
                 SizedBox(height: 12),
                 AuthButton(
                   label: 'Continuer avec Apple',
-                  icon: Icons.apple,
+                  icon: FaIcon(FontAwesomeIcons.apple, size: 22),
                   onPressed: _signUpWithApple,
                 ),
                 SizedBox(height: 24),
