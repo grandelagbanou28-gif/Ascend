@@ -65,22 +65,6 @@ class AuthService {
     );
   }
 
-  // Sign in with Google
-  static Future<bool> signInWithGoogle() async {
-    return await _client.auth.signInWithOAuth(
-      OAuthProvider.google,
-      redirectTo: 'io.supabase.flutter://login-callback/',
-    );
-  }
-
-  // Sign in with Apple
-  static Future<bool> signInWithApple() async {
-    return await _client.auth.signInWithOAuth(
-      OAuthProvider.apple,
-      redirectTo: 'io.supabase.flutter://login-callback/',
-    );
-  }
-
   // Sign in anonymously
   static Future<AuthResponse> signInAnonymously() async {
     return await _client.auth.signInAnonymously();
