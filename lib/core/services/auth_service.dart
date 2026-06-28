@@ -19,6 +19,26 @@ class AuthService {
 
   static String? get userAvatarUrl => currentUser?.userMetadata?['avatar_url'];
 
+  static String? get userId => currentUser?.id;
+
+  static DateTime? get userCreatedAt {
+    if (currentUser?.createdAt == null) return null;
+    return DateTime.tryParse(currentUser!.createdAt!);
+  }
+
+  static String? get userPhone => currentUser?.phone;
+
+  static bool get isEmailConfirmed => currentUser?.emailConfirmedAt != null;
+
+  static String? get authProvider {
+    if (currentUser == null) return null;
+    if (currentUser!.appMetadata['provider'] == 'email') return 'email';
+    if (currentUser!.appMetadata['provider'] == 'google') return 'google';
+    if (currentUser!.appMetadata['provider'] == 'apple') return 'apple';
+    if (currentUser!.isAnonymous) return 'anonymous';
+    return currentUser!.appMetadata['provider'];
+  }
+
   // Sign up with email and password
   static Future<AuthResponse> signUp({
     required String email,
