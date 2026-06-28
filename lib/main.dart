@@ -19,6 +19,7 @@ import 'package:ascend/core/services/goal_service.dart';
 import 'package:ascend/core/services/challenge_service.dart';
 import 'package:ascend/core/services/focus_service.dart';
 import 'package:ascend/core/services/journal_service.dart';
+import 'package:ascend/core/services/gamification_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() async {
@@ -83,6 +84,7 @@ Future<void> _initializeServices() async {
   await ChallengeService.loadChallenges();
   await FocusService.loadSessions();
   await JournalService.loadEntries();
+  await GamificationService.loadData();
 }
 
 class HabitTrackerApp extends StatefulWidget {

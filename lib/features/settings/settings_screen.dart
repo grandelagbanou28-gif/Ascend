@@ -44,8 +44,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   int _autoBackupFrequency = 7; // Weekly
   int _dataRetentionDays = 365; // 1 year
   double _chartAnimationSpeed = 1.0;
-  String _dateFormat = 'MMM d, yyyy';
-  String _language = 'English';
+  String _dateFormat = 'JJ/MM/AAAA';
+  String _language = 'Français';
+  String _currency = '€';
   
   @override
   void initState() {
@@ -103,7 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          'Settings',
+          'Paramètres',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
@@ -139,13 +140,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: FadeInAnimation(child: widget),
             ),
             children: [
-              _buildThemeSection(),
+              _buildGeneralSection(),
+              SizedBox(height: 16),
+              _buildAppearanceSection(),
               SizedBox(height: 16),
               _buildHabitsSection(),
               SizedBox(height: 16),
               _buildNotificationsSection(),
-              SizedBox(height: 16),
-              _buildDisplaySection(),
               SizedBox(height: 16),
               _buildDataSection(),
               SizedBox(height: 16),
@@ -163,20 +164,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
   
-  Widget _buildThemeSection() {
+  Widget _buildGeneralSection() {
     return _buildSettingsCard(
-      title: '🎨 Appearance',
+      title: '⚙️ Général',
       children: [
-        SwitchListTile(
-          title: Text('Dark Mode'),
-          subtitle: Text('Toggle dark/light theme'),
-          value: widget.isDarkMode,
-          onChanged: (_) => widget.toggleTheme(),
-          secondary: Icon(widget.isDarkMode ? Icons.dark_mode : Icons.light_mode),
+        ListTile(
+          title: Text('Langue'),
+          subtitle: Text(_language),
+          leading: Icon(Icons.language),
+          trailing: Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: _showLanguageSelector,
         ),
         ListTile(
-          title: Text('Choose Theme'),
-          subtitle: Text('Select from 40+ available themes'),
+          title: Text('Devise'),
+          subtitle: Text(_currency),
+          leading: Icon(Icons.attach_money),
+          trailing: Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: _showCurrencySelector,
+        ),
+        ListTile(
+          title: Text('Format de date'),
+          subtitle: Text(_dateFormat),
+          leading: Icon(Icons.date_range),
+          trailing: Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: _showDateFormatSelector,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAppearanceSection() {
+    return _buildSettingsCard(
+      title: '🎨 Apparence',
+      children: [
+        ListTile(
+          title: Text('Thème'),
+          subtitle: Text('Sélectionner parmi 40+ thèmes disponibles'),
           leading: Icon(Icons.palette),
           trailing: Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () => Navigator.push(
@@ -191,8 +214,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         SwitchListTile(
-          title: Text('Compact Mode'),
-          subtitle: Text('Show more content in less space'),
+          title: Text('Mode sombre'),
+          subtitle: Text('Basculer entre thème sombre/lumineux'),
+          value: widget.isDarkMode,
+          onChanged: (_) => widget.toggleTheme(),
+          secondary: Icon(widget.isDarkMode ? Icons.dark_mode : Icons.light_mode),
+        ),
+        SwitchListTile(
+          title: Text('Mode compact'),
+          subtitle: Text('Afficher plus de contenu en moins d\'espace'),
           value: _compactMode,
           onChanged: (value) async {
             setState(() => _compactMode = value);
@@ -201,8 +231,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           secondary: Icon(Icons.view_compact),
         ),
         SwitchListTile(
-          title: Text('Show Progress Animations'),
-          subtitle: Text('Animated charts and progress indicators'),
+          title: Text('Animations de progression'),
+          subtitle: Text('Graphiques et indicateurs animés'),
           value: _showProgressAnimations,
           onChanged: (value) async {
             setState(() => _showProgressAnimations = value);
@@ -211,7 +241,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           secondary: Icon(Icons.animation),
         ),
         ListTile(
-          title: Text('Animation Speed'),
+          title: Text('Vitesse d\'animation'),
           subtitle: Text('${(_chartAnimationSpeed * 100).toInt()}%'),
           leading: Icon(Icons.speed),
           trailing: SizedBox(
@@ -234,25 +264,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   
   Widget _buildHabitsSection() {
     return _buildSettingsCard(
-      title: '📋 Habits',
+      title: '📋 Habitudes',
       children: [
         ListTile(
-          title: Text('Default Habit Type'),
+          title: Text('Type d\'habitude par défaut'),
           subtitle: Text(formatPascalCase(_defaultHabitType.toString().split('.').last)),
           leading: Icon(Icons.category),
           trailing: Icon(Icons.arrow_forward_ios, size: 16),
           onTap: _showHabitTypeSelector,
         ),
         ListTile(
-          title: Text('Default Frequency'),
+          title: Text('Fréquence par défaut'),
           subtitle: Text(formatPascalCase(_defaultFrequency.toString().split('.').last)),
           leading: Icon(Icons.schedule),
           trailing: Icon(Icons.arrow_forward_ios, size: 16),
           onTap: _showFrequencySelector,
         ),
         SwitchListTile(
-          title: Text('Show Habit Icons'),
-          subtitle: Text('Display icons next to habit names'),
+          title: Text('Afficher les icônes'),
+          subtitle: Text('Afficher les icônes à côté des noms'),
           value: _showHabitIcons,
           onChanged: (value) async {
             setState(() => _showHabitIcons = value);
@@ -261,8 +291,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           secondary: Icon(Icons.emoji_emotions),
         ),
         SwitchListTile(
-          title: Text('Show Success Rate'),
-          subtitle: Text('Display success percentage'),
+          title: Text('Afficher le taux de réussite'),
+          subtitle: Text('Afficher le pourcentage de réussite'),
           value: _showSuccessRate,
           onChanged: (value) async {
             setState(() => _showSuccessRate = value);
@@ -271,8 +301,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           secondary: Icon(Icons.percent),
         ),
         SwitchListTile(
-          title: Text('Show Current Streak'),
-          subtitle: Text('Display current streak count'),
+          title: Text('Afficher la série en cours'),
+          subtitle: Text('Afficher le compteur de série'),
           value: _showCurrentStreak,
           onChanged: (value) async {
             setState(() => _showCurrentStreak = value);
@@ -289,8 +319,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: '🔔 Notifications',
       children: [
         SwitchListTile(
-          title: Text('Enable Notifications'),
-          subtitle: Text('Receive habit reminders'),
+          title: Text('Activer les notifications'),
+          subtitle: Text('Recevoir les rappels d\'habitudes'),
           value: _notificationsEnabled,
           onChanged: (value) async {
             setState(() => _notificationsEnabled = value);
@@ -300,15 +330,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         if (_notificationsEnabled) ...[
           ListTile(
-            title: Text('Default Reminder Time'),
+            title: Text('Heure de rappel par défaut'),
             subtitle: Text('$_reminderTime:00'),
             leading: Icon(Icons.access_time),
             trailing: Icon(Icons.arrow_forward_ios, size: 16),
             onTap: _showTimeSelector,
           ),
           SwitchListTile(
-            title: Text('Sound'),
-            subtitle: Text('Play notification sound'),
+            title: Text('Son'),
+            subtitle: Text('Jouer le son de notification'),
             value: _soundEnabled,
             onChanged: (value) async {
               setState(() => _soundEnabled = value);
@@ -318,7 +348,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           SwitchListTile(
             title: Text('Vibration'),
-            subtitle: Text('Vibrate on notifications'),
+            subtitle: Text('Vibrer lors des notifications'),
             value: _vibrationEnabled,
             onChanged: (value) async {
               setState(() => _vibrationEnabled = value);
@@ -327,8 +357,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             secondary: Icon(Icons.vibration),
           ),
           SwitchListTile(
-            title: Text('Streak Notifications'),
-            subtitle: Text('Celebrate streak milestones'),
+            title: Text('Notifications de série'),
+            subtitle: Text('Célébrer les étapes de série'),
             value: _showStreakNotifications,
             onChanged: (value) async {
               setState(() => _showStreakNotifications = value);
@@ -337,8 +367,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             secondary: Icon(Icons.celebration),
           ),
           SwitchListTile(
-            title: Text('Milestone Notifications'),
-            subtitle: Text('Notify on achievements'),
+            title: Text('Notifications d\'accomplissements'),
+            subtitle: Text('Notifier les réussites'),
             value: _showMilestoneNotifications,
             onChanged: (value) async {
               setState(() => _showMilestoneNotifications = value);
@@ -351,68 +381,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
   
-  Widget _buildDisplaySection() {
-    return _buildSettingsCard(
-      title: '📊 Display',
-      children: [
-        ListTile(
-          title: Text('Date Format'),
-          subtitle: Text(_dateFormat),
-          leading: Icon(Icons.date_range),
-          trailing: Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: _showDateFormatSelector,
-        ),
-        SwitchListTile(
-          title: Text('24-Hour Format'),
-          subtitle: Text('Use 24-hour time format'),
-          value: _use24HourFormat,
-          onChanged: (value) async {
-            setState(() => _use24HourFormat = value);
-            await SettingsService.setUse24HourFormat(value);
-          },
-          secondary: Icon(Icons.schedule),
-        ),
-        SwitchListTile(
-          title: Text('Show Weekends'),
-          subtitle: Text('Include weekends in calendar view'),
-          value: _showWeekends,
-          onChanged: (value) async {
-            setState(() => _showWeekends = value);
-            await SettingsService.setShowWeekends(value);
-          },
-          secondary: Icon(Icons.weekend),
-        ),
-        SwitchListTile(
-          title: Text('Motivational Quotes'),
-          subtitle: Text('Show inspiring messages'),
-          value: _showMotivationalQuotes,
-          onChanged: (value) async {
-            setState(() => _showMotivationalQuotes = value);
-            await SettingsService.setMotivationalQuotes(value);
-          },
-          secondary: Icon(Icons.format_quote),
-        ),
-        SwitchListTile(
-          title: Text('Today Widget'),
-          subtitle: Text('Show today\'s habits widget'),
-          value: _showTodayWidget,
-          onChanged: (value) async {
-            setState(() => _showTodayWidget = value);
-            await SettingsService.setTodayWidget(value);
-          },
-          secondary: Icon(Icons.today),
-        ),
-      ],
-    );
-  }
-  
   Widget _buildDataSection() {
     return _buildSettingsCard(
-      title: '💾 Data & Backup',
+      title: '💾 Données',
       children: [
         ListTile(
-          title: Text('Backup & Import'),
-          subtitle: Text('Manage your data backups'),
+          title: Text('Sauvegarde & Import'),
+          subtitle: Text('Gérer les sauvegardes de données'),
           leading: Icon(Icons.backup),
           trailing: Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () => Navigator.push(
@@ -420,42 +395,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
             MaterialPageRoute(builder: (context) => BackupImportScreen()),
           ),
         ),
+        ListTile(
+          title: Text('Exporter les données'),
+          subtitle: Text('Sauvegarder vos données en fichier'),
+          leading: Icon(Icons.file_upload),
+          trailing: Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: _exportData,
+        ),
         SwitchListTile(
-          title: Text('Auto Backup'),
-          subtitle: Text('Automatically backup data'),
+          title: Text('Sauvegarde automatique'),
+          subtitle: Text('Sauvegarder automatiquement les données'),
           value: _autoBackup,
           onChanged: (value) => setState(() => _autoBackup = value),
           secondary: Icon(Icons.cloud_upload),
         ),
         if (_autoBackup) ...[
           ListTile(
-            title: Text('Backup Frequency'),
-            subtitle: Text('Every $_autoBackupFrequency days'),
+            title: Text('Fréquence de sauvegarde'),
+            subtitle: Text('Tous les $_autoBackupFrequency jours'),
             leading: Icon(Icons.schedule),
             trailing: Icon(Icons.arrow_forward_ios, size: 16),
             onTap: _showBackupFrequencySelector,
           ),
         ],
         ListTile(
-          title: Text('Data Retention'),
-          subtitle: Text('Keep data for $_dataRetentionDays days'),
+          title: Text('Conservation des données'),
+          subtitle: Text('Conserver les données pendant $_dataRetentionDays jours'),
           leading: Icon(Icons.history),
           trailing: Icon(Icons.arrow_forward_ios, size: 16),
           onTap: _showDataRetentionSelector,
         ),
         SwitchListTile(
-          title: Text('Data Validation'),
-          subtitle: Text('Validate data integrity'),
+          title: Text('Validation des données'),
+          subtitle: Text('Valider l\'intégrité des données'),
           value: _enableDataValidation,
           onChanged: (value) => setState(() => _enableDataValidation = value),
           secondary: Icon(Icons.verified),
         ),
         ListTile(
-          title: Text('Clear All Data'),
-          subtitle: Text('Delete all habits and entries'),
+          title: Text('Supprimer le compte'),
+          subtitle: Text('Supprimer définitivement toutes les données'),
           leading: Icon(Icons.delete_forever, color: Colors.red),
           trailing: Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: _showClearDataDialog,
+          onTap: _showDeleteAccountDialog,
         ),
       ],
     );
@@ -463,18 +445,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   
   Widget _buildAdvancedSection() {
     return _buildSettingsCard(
-      title: '⚙️ Advanced',
+      title: '⚙️ Avancé',
       children: [
-        ListTile(
-          title: Text('Language'),
-          subtitle: Text(_language),
-          leading: Icon(Icons.language),
-          trailing: Icon(Icons.arrow_forward_ios, size: 16),
-          onTap: _showLanguageSelector,
-        ),
         SwitchListTile(
-          title: Text('Haptic Feedback'),
-          subtitle: Text('Vibrate on interactions'),
+          title: Text('Retour haptique'),
+          subtitle: Text('Vibrer lors des interactions'),
           value: _enableHapticFeedback,
           onChanged: (value) async {
             setState(() => _enableHapticFeedback = value);
@@ -483,8 +458,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           secondary: Icon(Icons.vibration),
         ),
         ListTile(
-          title: Text('Reset Settings'),
-          subtitle: Text('Restore default settings'),
+          title: Text('Réinitialiser les paramètres'),
+          subtitle: Text('Restaurer les paramètres par défaut'),
           leading: Icon(Icons.restore, color: Colors.orange),
           trailing: Icon(Icons.arrow_forward_ios, size: 16),
           onTap: _showResetSettingsDialog,
@@ -495,37 +470,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
   
   Widget _buildAboutSection() {
     return _buildSettingsCard(
-      title: 'ℹ️ About',
+      title: 'ℹ️ À propos',
       children: [
         ListTile(
-          title: Text('App Version'),
+          title: Text('Version de l\'application'),
           subtitle: Text('1.0.0'),
           leading: Icon(Icons.info_outline),
         ),
         ListTile(
-          title: Text('Privacy Policy'),
-          subtitle: Text('How we handle your data'),
+          title: Text('Politique de confidentialité'),
+          subtitle: Text('Comment nous gérons vos données'),
           leading: Icon(Icons.privacy_tip),
           trailing: Icon(Icons.arrow_forward_ios, size: 16),
           onTap: _showPrivacyPolicy,
         ),
         ListTile(
-          title: Text('Terms of Service'),
-          subtitle: Text('App usage terms'),
+          title: Text('Conditions d\'utilisation'),
+          subtitle: Text('Termes d\'utilisation de l\'application'),
           leading: Icon(Icons.description),
           trailing: Icon(Icons.arrow_forward_ios, size: 16),
           onTap: _showTermsOfService,
         ),
         ListTile(
-          title: Text('Rate App'),
-          subtitle: Text('Leave a review'),
+          title: Text('Noter l\'application'),
+          subtitle: Text('Laisser un avis'),
           leading: Icon(Icons.star),
           trailing: Icon(Icons.arrow_forward_ios, size: 16),
           onTap: _rateApp,
         ),
         ListTile(
-          title: Text('Contact Support'),
-          subtitle: Text('Get help or report issues'),
+          title: Text('Contacter le support'),
+          subtitle: Text('Obtenir de l\'aide ou signaler un problème'),
           leading: Icon(Icons.support),
           trailing: Icon(Icons.arrow_forward_ios, size: 16),
           onTap: _contactSupport,
@@ -536,11 +511,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   
   Widget _buildDebugSection() {
     return _buildSettingsCard(
-      title: '🛠️ Debug',
+      title: '🛠️ Débogage',
       children: [
         ListTile(
-          title: Text('Debug Test Page'),
-          subtitle: Text('Testing tools (Debug mode only)'),
+          title: Text('Page de test de débogage'),
+          subtitle: Text('Outils de test (mode débogage uniquement)'),
           leading: Icon(Icons.bug_report, color: Colors.red),
           trailing: Icon(Icons.arrow_forward_ios, size: 16),
           onTap: () => Navigator.push(
@@ -549,8 +524,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         ListTile(
-          title: Text('Generate Test Data'),
-          subtitle: Text('Create sample habits for testing'),
+          title: Text('Générer des données de test'),
+          subtitle: Text('Créer des habitudes d\'exemple pour les tests'),
           leading: Icon(Icons.data_object, color: Colors.blue),
           trailing: Icon(Icons.arrow_forward_ios, size: 16),
           onTap: _generateTestData,
@@ -601,7 +576,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Select Default Habit Type'),
+        title: Text('Sélectionner le type d\'habitude par défaut'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: HabitType.values.map((type) {
@@ -627,7 +602,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Select Default Frequency'),
+        title: Text('Sélectionner la fréquence par défaut'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: HabitFrequency.values.map((freq) {
@@ -663,17 +638,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
   
   void _showDateFormatSelector() {
     final formats = [
-      'MMM d, yyyy',
-      'dd/MM/yyyy',
-      'MM/dd/yyyy',
-      'yyyy-MM-dd',
-      'd MMM yyyy',
+      'JJ/MM/AAAA',
+      'MM/JJ/AAAA',
+      'AAAA-MM-JJ',
     ];
     
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Select Date Format'),
+        title: Text('Sélectionner le format de date'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: formats.map((format) {
@@ -701,12 +674,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Backup Frequency'),
+        title: Text('Fréquence de sauvegarde'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: frequencies.map((days) {
             return RadioListTile<int>(
-              title: Text('Every $days day${days > 1 ? 's' : ''}'),
+              title: Text('Tous les $days jour${days > 1 ? 's' : ''}'),
               value: days,
               groupValue: _autoBackupFrequency,
               onChanged: (int? value) {
@@ -729,12 +702,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Data Retention'),
+        title: Text('Conservation des données'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: retentions.map((days) {
             return RadioListTile<int>(
-              title: Text(days == -1 ? 'Forever' : '$days days'),
+              title: Text(days == -1 ? 'Indéfiniment' : '$days jours'),
               value: days,
               groupValue: _dataRetentionDays,
               onChanged: (int? value) {
@@ -752,12 +725,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
   
   void _showLanguageSelector() {
-    final languages = ['English', 'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Japanese', 'Chinese'];
+    final languages = ['Français', 'English', 'Español'];
     
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Select Language'),
+        title: Text('Sélectionner la langue'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: languages.map((lang) {
@@ -783,23 +756,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Clear All Data'),
-        content: Text('This will permanently delete all your habits and entries. This action cannot be undone.'),
+        title: Text('Supprimer toutes les données'),
+        content: Text('Cette action supprimera définitivement toutes vos habitudes et entrées. Cette action est irréversible.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: Text('Annuler'),
           ),
           ElevatedButton(
             onPressed: () async {
               // Clear all data
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('All data cleared')),
+                SnackBar(content: Text('Toutes les données ont été supprimées')),
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text('Clear All'),
+            child: Text('Tout supprimer'),
           ),
         ],
       ),
@@ -810,22 +783,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Reset Settings'),
-        content: Text('This will restore all settings to their default values.'),
+        title: Text('Réinitialiser les paramètres'),
+        content: Text('Cette action restaurera tous les paramètres à leurs valeurs par défaut.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            child: Text('Annuler'),
           ),
           ElevatedButton(
             onPressed: () {
               // Reset settings
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Settings reset to defaults')),
+                SnackBar(content: Text('Paramètres réinitialisés')),
               );
             },
-            child: Text('Reset'),
+            child: Text('Réinitialiser'),
           ),
         ],
       ),
@@ -836,18 +809,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Privacy Policy'),
+        title: Text('Politique de confidentialité'),
         content: SingleChildScrollView(
           child: Text(
-            'Ascend respects your privacy. All data is stored locally on your device. '
-            'We do not collect, store, or share any personal information. '
-            'Your habit data remains private and under your control.',
+            'Ascend respecte votre vie privée. Toutes les données sont stockées localement sur votre appareil. '
+            'Nous ne collectons, stockons ni ne partageons aucune information personnelle. '
+            'Vos données d\'habitudes restent privées et sous votre contrôle.',
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
+            child: Text('Fermer'),
           ),
         ],
       ),
@@ -858,18 +831,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Terms of Service'),
+        title: Text('Conditions d\'utilisation'),
         content: SingleChildScrollView(
           child: Text(
-            'By using Ascend, you agree to use the app responsibly. '
-            'The app is provided as-is without warranties. '
-            'You are responsible for backing up your data.',
+            'En utilisant Ascend, vous acceptez d\'utiliser l\'application de manière responsable. '
+            'L\'application est fournie en l\'état sans garantie. '
+            'Vous êtes responsable de la sauvegarde de vos données.',
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
+            child: Text('Fermer'),
           ),
         ],
       ),
@@ -878,20 +851,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
   
   void _rateApp() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Rate app functionality would open app store')),
+      SnackBar(content: Text('La fonctionnalité d\'évaluation ouvrirait le magasin d\'applications')),
     );
   }
   
   void _contactSupport() {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Contact support functionality would open email')),
+      SnackBar(content: Text('La fonctionnalité de contact ouvrirait un email')),
     );
   }
   
   void _generateTestData() async {
     // Generate sample habits for testing
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Test data generated')),
+      SnackBar(content: Text('Données de test générées')),
+    );
+  }
+  
+  void _showCurrencySelector() {
+    final currencies = ['€', '$', '£', '¥'];
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Sélectionner la devise'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: currencies.map((currency) {
+            return RadioListTile<String>(
+              title: Text(currency),
+              value: currency,
+              groupValue: _currency,
+              onChanged: (String? value) {
+                if (value != null) {
+                  setState(() => _currency = value);
+                  Navigator.pop(context);
+                }
+              },
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+  
+  void _exportData() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Fonctionnalité d\'exportation des données')),
+    );
+  }
+  
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Supprimer le compte'),
+        content: Text('Cette action supprimera définitivement toutes vos données, y compris vos habitudes, entrées et paramètres. Cette action est irréversible.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Compte supprimé')),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text('Supprimer définitivement'),
+          ),
+        ],
+      ),
     );
   }
 }

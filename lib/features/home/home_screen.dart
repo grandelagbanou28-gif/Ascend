@@ -34,6 +34,9 @@ import 'package:ascend/features/focus/focus_screen.dart';
 import 'package:ascend/features/journal/journal_screen.dart';
 import 'package:ascend/features/calendar/calendar_screen.dart';
 import 'package:ascend/features/statistics/statistics_screen.dart';
+import 'package:ascend/features/gamification/gamification_screen.dart';
+import 'package:ascend/features/shop/shop_screen.dart';
+import 'package:ascend/features/leaderboard/leaderboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback toggleTheme;
@@ -480,6 +483,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  void _openGamification() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GamificationScreen(),
+      ),
+    );
+  }
+
+  void _openShop() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ShopScreen(),
+      ),
+    );
+  }
+
+  void _openLeaderboard() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LeaderboardScreen(),
+      ),
+    );
+  }
+
   void _showKeyboardShortcuts() {
     showKeyboardShortcutsDialog(context);
   }
@@ -582,6 +612,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   case 'statistics':
                     _openStatistics();
                     break;
+                  case 'gamification':
+                    _openGamification();
+                    break;
+                  case 'shop':
+                    _openShop();
+                    break;
+                  case 'leaderboard':
+                    _openLeaderboard();
+                    break;
                   case 'points':
                     _openPointsScreen();
                     break;
@@ -668,6 +707,37 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       Icon(Icons.bar_chart, size: 18),
                       SizedBox(width: 8),
                       Text('Statistiques'),
+                    ],
+                  ),
+                ),
+                PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'gamification',
+                  child: Row(
+                    children: [
+                      Icon(Icons.emoji_events, size: 18),
+                      SizedBox(width: 8),
+                      Text('Gamification'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'shop',
+                  child: Row(
+                    children: [
+                      Icon(Icons.store, size: 18),
+                      SizedBox(width: 8),
+                      Text('Boutique'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'leaderboard',
+                  child: Row(
+                    children: [
+                      Icon(Icons.leaderboard, size: 18),
+                      SizedBox(width: 8),
+                      Text('Classement'),
                     ],
                   ),
                 ),
