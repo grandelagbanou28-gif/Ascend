@@ -46,7 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   double _chartAnimationSpeed = 1.0;
   String _dateFormat = 'JJ/MM/AAAA';
   String _language = 'Français';
-  String _currency = '€';
+  String _currency = 'FCFA';
   
   @override
   void initState() {
@@ -869,7 +869,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
   
   void _showCurrencySelector() {
-    final currencies = ['€', '$', '£', '¥'];
+    final currencies = ['FCFA', '€', '$', '£', '¥'];
     
     showDialog(
       context: context,
