@@ -31,6 +31,9 @@ import 'package:ascend/features/auth/profile_screen.dart';
 import 'package:ascend/features/goals/goal_list_screen.dart';
 import 'package:ascend/features/challenges/challenge_list_screen.dart';
 import 'package:ascend/features/focus/focus_screen.dart';
+import 'package:ascend/features/journal/journal_screen.dart';
+import 'package:ascend/features/calendar/calendar_screen.dart';
+import 'package:ascend/features/statistics/statistics_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback toggleTheme;
@@ -450,6 +453,33 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  void _openJournal() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => JournalScreen(),
+      ),
+    );
+  }
+
+  void _openCalendar() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CalendarScreen(),
+      ),
+    );
+  }
+
+  void _openStatistics() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StatisticsScreen(),
+      ),
+    );
+  }
+
   void _showKeyboardShortcuts() {
     showKeyboardShortcutsDialog(context);
   }
@@ -543,6 +573,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   case 'focus':
                     _openFocus();
                     break;
+                  case 'journal':
+                    _openJournal();
+                    break;
+                  case 'calendar':
+                    _openCalendar();
+                    break;
+                  case 'statistics':
+                    _openStatistics();
+                    break;
                   case 'points':
                     _openPointsScreen();
                     break;
@@ -599,6 +638,36 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       Icon(Icons.timer, size: 18),
                       SizedBox(width: 8),
                       Text('Focus'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'journal',
+                  child: Row(
+                    children: [
+                      Icon(Icons.book, size: 18),
+                      SizedBox(width: 8),
+                      Text('Journal'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'calendar',
+                  child: Row(
+                    children: [
+                      Icon(Icons.calendar_month, size: 18),
+                      SizedBox(width: 8),
+                      Text('Calendrier'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'statistics',
+                  child: Row(
+                    children: [
+                      Icon(Icons.bar_chart, size: 18),
+                      SizedBox(width: 8),
+                      Text('Statistiques'),
                     ],
                   ),
                 ),
