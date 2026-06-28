@@ -9,6 +9,9 @@ import 'package:ascend/core/services/notification_service.dart';
 import 'package:ascend/core/services/widget_service.dart';
 import 'package:ascend/core/services/theme_service.dart';
 import 'package:ascend/features/onboarding/onboarding_screen.dart';
+import 'package:ascend/features/auth/login_screen.dart';
+import 'package:ascend/core/services/auth_service.dart';
+import 'package:ascend/core/config/supabase_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ascend/core/services/storage_service.dart';
 import 'package:ascend/core/services/keyboard_service.dart';
@@ -16,6 +19,9 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Supabase
+  await SupabaseConfig.initialize();
   
   // Initialize sqflite_ffi for Windows
   if (Platform.isWindows || Platform.isLinux) {
@@ -124,24 +130,33 @@ class _HabitTrackerAppState extends State<HabitTrackerApp> {
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      home: widget.isFirstLaunch 
-          ? Builder(
-            builder: (context) {
-              return OnboardingScreen(
-                  onComplete: (themePreference) {
-                    if (themePreference != null) {
-                      changeTheme(themePreference);
-                    }
-                    _completeOnboarding(context);
-                  },
-                );
-            }
-          )
-          : HomeScreen(
-              toggleTheme: toggleTheme,
-              isDarkMode: _isDarkMode,
-              changeTheme: changeTheme,
-            ),
+      home: StreamBuilder(
+        stream: AuthService.authStateChanges,
+        builder: (context, snapshot) {
+          final session = snapshot.data?.session;
+          
+          if (widget.isFirstLaunch) {
+            return OnboardingScreen(
+              onComplete: (themePreference) {
+                if (themePreference != null) {
+                  changeTheme(themePreference);
+                }
+                _completeOnboarding(context);
+              },
+            );
+          }
+          
+          if (session == null) {
+            return LoginScreen();
+          }
+          
+          return HomeScreen(
+            toggleTheme: toggleTheme,
+            isDarkMode: _isDarkMode,
+            changeTheme: changeTheme,
+          );
+        },
+      ),
     );
   }
 

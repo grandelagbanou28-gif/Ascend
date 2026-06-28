@@ -21,6 +21,7 @@ import 'package:ascend/core/services/keyboard_service.dart';
 import 'package:ascend/core/widgets/keyboard_aware_widget.dart';
 import 'package:ascend/core/widgets/focusable_button.dart';
 import 'package:ascend/core/widgets/keyboard_shortcuts_dialog.dart';
+import 'package:ascend/features/auth/profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback toggleTheme;
@@ -345,6 +346,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  void _openProfile() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ProfileScreen(),
+      ),
+    );
+  }
+
   void _showKeyboardShortcuts() {
     showKeyboardShortcutsDialog(context);
   }
@@ -441,6 +451,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   case 'achievements':
                     _openAchievements();
                     break;
+                  case 'profile':
+                    _openProfile();
+                    break;
                 }
               },
               itemBuilder: (context) => [
@@ -492,6 +505,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       Icon(Icons.emoji_events, size: 18),
                       SizedBox(width: 8),
                       Text('Achievements'),
+                    ],
+                  ),
+                ),
+                PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'profile',
+                  child: Row(
+                    children: [
+                      Icon(Icons.person_outlined, size: 18),
+                      SizedBox(width: 8),
+                      Text('Mon profil'),
                     ],
                   ),
                 ),
