@@ -1,6 +1,7 @@
 // lib/main.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import 'package:ascend/features/habits/add_habit_sheet.dart';
 import 'package:ascend/main.dart';
 import 'package:ascend/features/settings/settings_screen.dart';
@@ -10,6 +11,10 @@ import 'package:ascend/data/models/habit.dart';
 import 'package:ascend/features/habits/habit_detail_screen.dart';
 import 'package:ascend/data/models/habit_entry.dart';
 import 'package:ascend/core/services/storage_service.dart';
+import 'package:ascend/core/services/auth_service.dart';
+import 'package:ascend/core/services/profile_service.dart';
+import 'package:ascend/data/models/user_profile.dart';
+import 'package:ascend/core/services/settings_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:ascend/features/habits/bulk_edit_screen.dart';
@@ -54,6 +59,23 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   bool _showArchived = false;
   String? _selectedCategory;
   List<String> _categories = [];
+  
+  // Dashboard state
+  UserProfile? _profile;
+  int _todayCompleted = 0;
+  int _todayRemaining = 0;
+  double _todayProgress = 0;
+  int _todayFocusTime = 0;
+  int _todayXpEarned = 0;
+  
+  // Widget visibility settings
+  bool _showQuoteWidget = true;
+  bool _showCalendarWidget = true;
+  bool _showProgressionWidget = true;
+  bool _showChallengesWidget = true;
+  bool _showFocusWidget = true;
+  bool _showGoalsWidget = true;
+  bool _showJournalWidget = true;
   
   // Keyboard navigation
   late ScrollController _habitsScrollController;
@@ -111,6 +133,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   Future<void> _loadHabits() async {
     setState(() => _isLoading = true);
+    
+    // Load profile
+    _profile = await ProfileService.getCurrentProfile();
+    
+    // Load widget settings
+    await _loadWidgetSettings();
+    
     final all = await StorageService.loadAll();
     
     // Filter active and archived habits
@@ -123,7 +152,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         .map((h) => h.category!)
         .toSet()
         .toList()
-        ..sort();
+      ..sort();
     
     // Apply category filter
     final filtered = _selectedCategory == null 
@@ -148,6 +177,34 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       }
     }
     
+    // Calculate today's stats
+    final today = DateTime.now();
+    int todayCompleted = 0;
+    int todayRemaining = 0;
+    int todayFocusTime = 0;
+    int todayXp = 0;
+    
+    for (var habit in active) {
+      if (habit.isDueToday()) {
+        final todayEntry = habit.entries.where((e) => 
+          e.date.year == today.year && 
+          e.date.month == today.month && 
+          e.date.day == today.day
+        ).firstOrNull;
+        
+        if (todayEntry != null) {
+          todayCompleted++;
+          todayXp += 10; // 10 XP per habit completed
+        } else {
+          todayRemaining++;
+        }
+      }
+    }
+    
+    double todayProgress = (todayCompleted + todayRemaining) > 0 
+        ? todayCompleted / (todayCompleted + todayRemaining) 
+        : 0;
+    
     setState(() {
       _habits = all;
       _activeHabits = active;
@@ -163,11 +220,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       
       _bestCurrentStreak = bestStreak;
       _bestStreakHabit = bestStreakHabit;
+      
+      _todayCompleted = todayCompleted;
+      _todayRemaining = todayRemaining;
+      _todayProgress = todayProgress;
+      _todayFocusTime = todayFocusTime;
+      _todayXpEarned = todayXp;
+      
       _isLoading = false;
     });
     
     // Update home widgets
     await WidgetService.updateHomeWidgets();
+  }
+  
+  Future<void> _loadWidgetSettings() async {
+    _showQuoteWidget = await SettingsService.getShowMotivationalQuotes();
+    _showCalendarWidget = true; // Default
+    _showProgressionWidget = true; // Default
+    _showChallengesWidget = true; // Default
+    _showFocusWidget = true; // Default
+    _showGoalsWidget = true; // Default
+    _showJournalWidget = true; // Default
   }
 
   void _showAddHabit() {
@@ -681,157 +755,709 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
   
   Widget _buildDashboard() {
-    if (_habits.isEmpty) {
-      return Center(
-        child: Text(
-          'Add habits to see your statistics',
-          style: TextStyle(color: Colors.grey),
-        ),
-      );
-    }
-    
     return SingleChildScrollView(
       controller: _dashboardScrollController,
       padding: EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildSectionTitle('Overall Progress'),
-          SizedBox(height: 12),
-          _buildMetricsCards(),
-          SizedBox(height: 24),
+          // Main greeting card
+          _buildGreetingCard(),
+          SizedBox(height: 16),
           
-          _buildSectionTitle('Success Rate by Habit'),
-          SizedBox(height: 12),
-          _buildSuccessRateChart(),
-          SizedBox(height: 24),
+          // Today's stats
+          _buildTodayStats(),
+          SizedBox(height: 16),
           
-          _buildSectionTitle('Habit Streaks'),
-          SizedBox(height: 12),
-          _buildStreaksList(),
-          SizedBox(height: 24),
+          // Progress bar
+          _buildProgressBar(),
+          SizedBox(height: 16),
           
-          _buildSectionTitle('Recent Entries'),
-          SizedBox(height: 12),
-          _buildRecentEntries(),
+          // Summary
+          _buildSummary(),
+          SizedBox(height: 16),
+          
+          // Customizable widgets
+          if (_showQuoteWidget) ...[
+            _buildQuoteWidget(),
+            SizedBox(height: 16),
+          ],
+          if (_showCalendarWidget) ...[
+            _buildCalendarWidget(),
+            SizedBox(height: 16),
+          ],
+          if (_showProgressionWidget) ...[
+            _buildProgressionWidget(),
+            SizedBox(height: 16),
+          ],
+          if (_showChallengesWidget) ...[
+            _buildChallengesWidget(),
+            SizedBox(height: 16),
+          ],
+          if (_showFocusWidget) ...[
+            _buildFocusWidget(),
+            SizedBox(height: 16),
+          ],
+          if (_showGoalsWidget) ...[
+            _buildGoalsWidget(),
+            SizedBox(height: 16),
+          ],
+          if (_showJournalWidget) ...[
+            _buildJournalWidget(),
+            SizedBox(height: 16),
+          ],
         ],
       ),
     );
   }
   
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 20,
-        fontWeight: FontWeight.bold,
-        color: Theme.of(context).colorScheme.primary,
+  Widget _buildGreetingCard() {
+    final hour = DateTime.now().hour;
+    String greeting = 'Bonjour';
+    if (hour >= 12 && hour < 18) {
+      greeting = 'Bon après-midi';
+    } else if (hour >= 18) {
+      greeting = 'Bonsoir';
+    }
+    
+    final userName = _profile?.displayName ?? AuthService.userDisplayName ?? 'Utilisateur';
+    
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        padding: EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$greeting, $userName !',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(height: 16),
+            Row(
+              children: [
+                _buildStatChip(
+                  icon: Icons.local_fire_department,
+                  label: 'Série',
+                  value: '${_profile?.currentStreak ?? _bestCurrentStreak} j',
+                ),
+                SizedBox(width: 12),
+                _buildStatChip(
+                  icon: Icons.star,
+                  label: 'Niveau',
+                  value: '${_profile?.level ?? 1}',
+                ),
+                SizedBox(width: 12),
+                _buildStatChip(
+                  icon: Icons.bolt,
+                  label: 'XP',
+                  value: '${_profile?.xp ?? 0}',
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
   
-  Widget _buildMetricsCards() {
+  Widget _buildStatChip({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: Colors.white, size: 16),
+          SizedBox(width: 6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 10,
+                ),
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildTodayStats() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Aujourd\'hui',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTodayStatItem(
+                    icon: Icons.pending_actions,
+                    label: 'Restantes',
+                    value: '$_todayRemaining',
+                    color: Colors.orange,
+                  ),
+                ),
+                Expanded(
+                  child: _buildTodayStatItem(
+                    icon: Icons.check_circle,
+                    label: 'Terminées',
+                    value: '$_todayCompleted',
+                    color: Colors.green,
+                  ),
+                ),
+                Expanded(
+                  child: _buildTodayStatItem(
+                    icon: Icons.timer,
+                    label: 'Focus',
+                    value: _formatTime(_todayFocusTime),
+                    color: Colors.blue,
+                  ),
+                ),
+                Expanded(
+                  child: _buildTodayStatItem(
+                    icon: Icons.bolt,
+                    label: 'XP',
+                    value: '+$_todayXpEarned',
+                    color: Colors.purple,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildTodayStatItem({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
     return Column(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _buildMetricCard(
-                title: 'Success Rate',
-                value: '${_overallSuccessRate.toStringAsFixed(1)}%',
-                icon: Icons.check_circle_outline,
-                color: Colors.green,
-              ),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: _buildMetricCard(
-                title: 'Total Entries',
-                value: '$_totalEntries',
-                icon: Icons.calendar_today,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildMetricCard(
-                title: 'Positive Days',
-                value: '$_totalPositiveDays',
-                icon: Icons.thumb_up_alt_outlined,
-                color: Colors.green,
-              ),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: _buildMetricCard(
-                title: 'Negative Days',
-                value: '$_totalNegativeDays',
-                icon: Icons.thumb_down_alt_outlined,
-                color: Colors.redAccent,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 12),
-        if (_bestCurrentStreak > 0)
-          _buildMetricCard(
-            title: 'Best Current Streak',
-            value: '$_bestCurrentStreak days - $_bestStreakHabit',
-            icon: Icons.local_fire_department,
-            color: Colors.orange,
-            isWide: true,
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
           ),
+          child: Icon(icon, color: color, size: 24),
+        ),
+        SizedBox(height: 8),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
       ],
     );
   }
   
-  Widget _buildMetricCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-    bool isWide = false,
-  }) {
+  Widget _buildProgressBar() {
+    final percentage = (_todayProgress * 100).toInt();
+    
     return Card(
-      elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: EdgeInsets.all(16),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Progression',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '$percentage %',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ],
             ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
+            SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: LinearProgressIndicator(
+                value: _todayProgress,
+                minHeight: 12,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  _todayProgress >= 1.0
+                      ? Colors.green
+                      : Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              '$_todayCompleted sur ${_todayCompleted + _todayRemaining} habitudes terminées',
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildSummary() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Résumé',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 16),
+            _buildSummaryRow(
+              icon: Icons.calendar_today,
+              label: 'Aujourd\'hui',
+              value: '${_todayCompleted + _todayRemaining} habitudes',
+            ),
+            Divider(),
+            _buildSummaryRow(
+              icon: Icons.check_circle,
+              label: 'Terminées',
+              value: '$_todayCompleted',
+            ),
+            Divider(),
+            _buildSummaryRow(
+              icon: Icons.pending_actions,
+              label: 'Restantes',
+              value: '$_todayRemaining',
+            ),
+            Divider(),
+            _buildSummaryRow(
+              icon: Icons.timer,
+              label: 'Temps Focus',
+              value: _formatTime(_todayFocusTime),
+            ),
+            Divider(),
+            _buildSummaryRow(
+              icon: Icons.bolt,
+              label: 'XP gagné',
+              value: '+$_todayXpEarned',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildSummaryRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 14),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildQuoteWidget() {
+    final quotes = [
+      'La régularité est la clé du succès.',
+      'Chaque jour est une nouvelle chance de s\'améliorer.',
+      'Les petites actions mènent à de grands résultats.',
+      'La persévérance vient à bout de tout.',
+      'Croyez en vous et tout est possible.',
+    ];
+    final quote = quotes[DateTime.now().day % quotes.length];
+    
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.format_quote, color: Theme.of(context).colorScheme.primary),
+                SizedBox(width: 8),
+                Text(
+                  'Citation du jour',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Text(
+              '"$quote"',
+              style: TextStyle(
+                fontSize: 16,
+                fontStyle: FontStyle.italic,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildCalendarWidget() {
+    final now = DateTime.now();
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.calendar_month, color: Theme.of(context).colorScheme.primary),
+                SizedBox(width: 8),
+                Text(
+                  'Calendrier',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Text(
+              DateFormat('MMMM yyyy', 'fr').format(now),
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+            SizedBox(height: 8),
+            // Simple calendar grid
+            Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: List.generate(daysInMonth, (index) {
+                final day = index + 1;
+                final isToday = day == now.day;
+                final isPast = day < now.day;
+                
+                return Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: isToday
+                        ? Theme.of(context).colorScheme.primary
+                        : isPast
+                            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.1)
+                            : null,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$day',
+                      style: TextStyle(
+                        color: isToday ? Colors.white : null,
+                        fontWeight: isToday ? FontWeight.bold : null,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: TextStyle(
-                      fontSize: isWide ? 16 : 20,
-                      fontWeight: FontWeight.bold,
+                );
+              }),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildProgressionWidget() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.trending_up, color: Theme.of(context).colorScheme.primary),
+                SizedBox(width: 8),
+                Text(
+                  'Progression',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            SizedBox(
+              height: 150,
+              child: BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: 100,
+                  titlesData: FlTitlesData(
+                    show: true,
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (double value, TitleMeta meta) {
+                          final days = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+                          if (value.toInt() < days.length) {
+                            return Text(days[value.toInt()], style: TextStyle(fontSize: 12));
+                          }
+                          return Text('');
+                        },
+                      ),
                     ),
-                    overflow: TextOverflow.ellipsis,
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    topTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  barGroups: List.generate(7, (index) {
+                    final value = (index < 5) ? (60.0 + index * 8) : (20.0 + index * 5);
+                    return BarChartGroupData(
+                      x: index,
+                      barRods: [
+                        BarChartRodData(
+                          toY: value,
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 20,
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(6)),
+                        ),
+                      ],
+                    );
+                  }),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildChallengesWidget() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.emoji_events, color: Colors.amber),
+                SizedBox(width: 8),
+                Text(
+                  'Défis',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12),
+            _buildChallengeItem(
+              title: '7 jours consécutifs',
+              progress: (_profile?.currentStreak ?? 0) / 7,
+              reward: '+50 XP',
+            ),
+            SizedBox(height: 8),
+            _buildChallengeItem(
+              title: '10 habitudes créées',
+              progress: _activeHabits.length / 10,
+              reward: '+100 XP',
+            ),
+            SizedBox(height: 8),
+            _buildChallengeItem(
+              title: '50 entrées complétées',
+              progress: _totalEntries / 50,
+              reward: '+200 XP',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildChallengeItem({
+    required String title,
+    required double progress,
+    required String reward,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: TextStyle(fontWeight: FontWeight.w500)),
+              SizedBox(height: 4),
+              LinearProgressIndicator(
+                value: progress.clamp(0.0, 1.0),
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(width: 12),
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: Colors.green.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            reward,
+            style: TextStyle(
+              color: Colors.green,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildFocusWidget() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.timer, color: Colors.blue),
+                SizedBox(width: 8),
+                Text(
+                  'Focus',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            Center(
+              child: Column(
+                children: [
+                  Text(
+                    _formatTime(_todayFocusTime),
+                    style: TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                  Text(
+                    'Temps total aujourd\'hui',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ),
@@ -842,234 +1468,116 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
   
-  Widget _buildSuccessRateChart() {
-    if (_habits.isEmpty) {
-      return SizedBox();
-    }
-    
-    return SizedBox(
-      height: 220,
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: BarChart(
-            BarChartData(
-              alignment: BarChartAlignment.spaceAround,
-              maxY: 100,
-              titlesData: FlTitlesData(
-                show: true,
-                bottomTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (double value, TitleMeta meta) {
-                      if (value.toInt() < _habits.length) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            _habits[value.toInt()].name.length > 6
-                                ? '${_habits[value.toInt()].name.substring(0, 6)}...'
-                                : _habits[value.toInt()].name,
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        );
-                      }
-                      return const Text('');
-                    },
-                    reservedSize: 30,
+  Widget _buildGoalsWidget() {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.flag, color: Colors.purple),
+                SizedBox(width: 8),
+                Text(
+                  'Objectifs',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                leftTitles: AxisTitles(
-                  sideTitles: SideTitles(
-                    showTitles: true,
-                    getTitlesWidget: (double value, TitleMeta meta) {
-                      return Text(
-                        '${value.toInt()}%',
-                        style: TextStyle(fontSize: 10),
-                      );
-                    },
-                    reservedSize: 30,
-                  ),
-                ),
-                topTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-                rightTitles: AxisTitles(
-                  sideTitles: SideTitles(showTitles: false),
-                ),
-              ),
-              borderData: FlBorderData(show: false),
-              gridData: FlGridData(
-                show: true,
-                drawHorizontalLine: true,
-                horizontalInterval: 20,
-                getDrawingHorizontalLine: (value) => FlLine(
-                  color: Colors.grey.withValues(alpha: 0.2),
-                  strokeWidth: 1,
-                ),
-                drawVerticalLine: false,
-              ),
-              barGroups: List.generate(_habits.length, (index) {
-                final habit = _habits[index];
-                return BarChartGroupData(
-                  x: index,
-                  barRods: [
-                    BarChartRodData(
-                      toY: habit.successRate,
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 16,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(4),
-                        topRight: Radius.circular(4),
-                      ),
-                    ),
-                  ],
-                );
-              }),
+              ],
             ),
-          ),
+            SizedBox(height: 12),
+            _buildGoalItem(
+              title: 'Niveau ${(_profile?.level ?? 1) + 1}',
+              progress: _profile?.xpProgress ?? 0,
+              label: '${_profile?.xp ?? 0} / ${_profile?.xpForNextLevel ?? 100} XP',
+            ),
+            SizedBox(height: 8),
+            _buildGoalItem(
+              title: 'Série de ${(_profile?.currentStreak ?? 0) + 7} jours',
+              progress: (_profile?.currentStreak ?? 0) / ((_profile?.currentStreak ?? 0) + 7),
+              label: '${_profile?.currentStreak ?? 0} / ${(_profile?.currentStreak ?? 0) + 7} jours',
+            ),
+          ],
         ),
       ),
     );
   }
   
-  Widget _buildStreaksList() {
-    if (_habits.isEmpty) {
-      return SizedBox();
-    }
-    
-    // Sort habits by current streak
-    final sortedHabits = [..._habits]..sort((a, b) => b.currentStreak.compareTo(a.currentStreak));
-    
+  Widget _buildGoalItem({
+    required String title,
+    required double progress,
+    required String label,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(title, style: TextStyle(fontWeight: FontWeight.w500)),
+            Text(label, style: TextStyle(fontSize: 12, color: Colors.grey)),
+          ],
+        ),
+        SizedBox(height: 4),
+        LinearProgressIndicator(
+          value: progress.clamp(0.0, 1.0),
+          backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildJournalWidget() {
     return Card(
-      elevation: 2, 
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: NeverScrollableScrollPhysics(),
+      child: Padding(
         padding: EdgeInsets.all(16),
-        itemCount: sortedHabits.length > 5 ? 5 : sortedHabits.length,
-        separatorBuilder: (_, __) => Divider(),
-        itemBuilder: (context, index) {
-          final habit = sortedHabits[index];
-          return Row(
-            children: [
-              Icon(
-                habit.icon ?? Icons.star,
-                color: Theme.of(context).colorScheme.primary,
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  habit.name,
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: habit.currentStreak > 0
-                      ? Colors.green.withValues(alpha: 0.1)
-                      : Colors.red.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  '${habit.currentStreak} days',
-                  style: TextStyle(
-                    color: habit.currentStreak > 0 ? Colors.green : Colors.red,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.book, color: Colors.teal),
+                SizedBox(width: 8),
+                Text(
+                  'Journal',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Text(
+              _profile?.favoriteQuote ?? 'Ajoutez une citation motivationnelle dans votre profil.',
+              style: TextStyle(
+                fontStyle: FontStyle.italic,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-            ],
-          );
-        },
+            ),
+            SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () {
+                // TODO: Open journal screen
+              },
+              icon: Icon(Icons.edit),
+              label: Text('Écrire dans le journal'),
+            ),
+          ],
+        ),
       ),
     );
   }
   
-  Widget _buildRecentEntries() {
-    if (_habits.isEmpty) {
-      return SizedBox();
-    }
-    
-    // Collect all entries from all habits
-    List<MapEntry<Habit, HabitEntry>> allEntries = [];
-    
-    for (var habit in _habits) {
-      for (var entry in habit.entries) {
-        allEntries.add(MapEntry(habit, entry));
-      }
-    }
-    
-    // Sort by date (newest first)
-    allEntries.sort((a, b) => b.value.date.compareTo(a.value.date));
-    
-    // Take only the 5 most recent
-    final recentEntries = allEntries.take(5).toList();
-    
-    if (recentEntries.isEmpty) {
-      return Center(child: Text('No entries yet'));
-    }
-    
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.all(16),
-        itemCount: recentEntries.length,
-        separatorBuilder: (_, __) => Divider(),
-        itemBuilder: (context, index) {
-          final habit = recentEntries[index].key;
-          final entry = recentEntries[index].value;
-          final isPositive = habit.isPositiveDay(entry);
-          
-          return Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isPositive 
-                      ? Colors.green.withValues(alpha: 0.1) 
-                      : Colors.red.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  isPositive ? Icons.check : Icons.close,
-                  color: isPositive ? Colors.green : Colors.red,
-                ),
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      habit.name,
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      DateFormat('MMM d, yyyy').format(entry.date),
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
-              Text(
-                'Day ${entry.dayNumber}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
+  String _formatTime(int seconds) {
+    if (seconds < 60) return '${seconds}s';
+    if (seconds < 3600) return '${(seconds / 60).floor()}m';
+    final hours = (seconds / 3600).floor();
+    final minutes = ((seconds % 3600) / 60).floor();
+    return '${hours}h ${minutes}m';
   }
 }
