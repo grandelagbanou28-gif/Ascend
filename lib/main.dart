@@ -21,9 +21,13 @@ import 'package:ascend/core/services/focus_service.dart';
 import 'package:ascend/core/services/journal_service.dart';
 import 'package:ascend/core/services/gamification_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize date formatting
+  await initializeDateFormatting();
   
   // Initialize Supabase
   await SupabaseConfig.initialize();

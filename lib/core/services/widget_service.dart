@@ -64,12 +64,14 @@ class WidgetService {
       await HomeWidget.saveWidgetData<String>('topHabits', jsonEncode(widgetData['topHabits']));
       await HomeWidget.saveWidgetData<String>('lastUpdated', widgetData['lastUpdated'] as String);
       
-      // Update the widget
-      await HomeWidget.updateWidget(
-        name: _widgetName,
-        androidName: 'AscendHabitWidget',
-        iOSName: 'AscendHabitWidget',
-      );
+      // Update the widget (may fail if Android widget class not registered)
+      try {
+        await HomeWidget.updateWidget(
+          name: _widgetName,
+          androidName: 'AscendHabitWidget',
+          iOSName: 'AscendHabitWidget',
+        );
+      } catch (_) {}
       
     } catch (e) {
       debugPrint('Error updating home widgets: $e');

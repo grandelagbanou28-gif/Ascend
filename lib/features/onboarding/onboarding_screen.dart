@@ -137,7 +137,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> with TickerProvider
       animation: _headerAnimationController,
       builder: (context, child) {
         return Container(
-          height: 120,
+          height: 130,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
