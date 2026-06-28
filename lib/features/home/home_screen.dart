@@ -28,6 +28,7 @@ import 'package:ascend/core/widgets/keyboard_aware_widget.dart';
 import 'package:ascend/core/widgets/focusable_button.dart';
 import 'package:ascend/core/widgets/keyboard_shortcuts_dialog.dart';
 import 'package:ascend/features/auth/profile_screen.dart';
+import 'package:ascend/features/goals/goal_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback toggleTheme;
@@ -420,6 +421,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  void _openGoals() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => GoalListScreen(),
+      ),
+    );
+  }
+
   void _showKeyboardShortcuts() {
     showKeyboardShortcutsDialog(context);
   }
@@ -504,6 +514,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   case 'bulk_edit':
                     _openBulkEdit();
                     break;
+                  case 'goals':
+                    _openGoals();
+                    break;
                   case 'points':
                     _openPointsScreen();
                     break;
@@ -533,6 +546,16 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   ),
                 ),
                 PopupMenuDivider(),
+                PopupMenuItem(
+                  value: 'goals',
+                  child: Row(
+                    children: [
+                      Icon(Icons.flag, size: 18),
+                      SizedBox(width: 8),
+                      Text('Objectifs'),
+                    ],
+                  ),
+                ),
                 PopupMenuItem(
                   value: 'points',
                   child: Row(

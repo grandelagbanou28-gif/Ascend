@@ -15,6 +15,7 @@ import 'package:ascend/core/config/supabase_config.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ascend/core/services/storage_service.dart';
 import 'package:ascend/core/services/keyboard_service.dart';
+import 'package:ascend/core/services/goal_service.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() async {
@@ -34,6 +35,7 @@ void main() async {
   // Initialize services
   await NotificationService.initialize();
   await WidgetService.initialize();
+  await _initializeServices();
   
   // Initialize keyboard service
   KeyboardService().initialize();
@@ -71,6 +73,10 @@ Future<void> migrateToDatabase() async {
   } catch (e) {
     print('Error during database migration: $e');
   }
+}
+
+Future<void> _initializeServices() async {
+  await GoalService.loadGoals();
 }
 
 class HabitTrackerApp extends StatefulWidget {
